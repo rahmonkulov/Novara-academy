@@ -6,6 +6,6 @@
     "nodejs_compat"
   ],
   "vars": {
-    "LIVE_AI_ENABLED": "false"
+    "LIVE_AI_ENABLED": "true"
   }
 }
