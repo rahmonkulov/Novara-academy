@@ -19,7 +19,7 @@ export async function GET() {
     availableProviders(c).map(async provider => {
       const started = Date.now();
       try {
-        const answer = await askJson(provider, c, {system: 'You are a health check. Reply with JSON only.', user: 'Return exactly this JSON object: {"ok": true}', maxTokens: 50});
+        const answer = await askJson(provider, c, {system: 'You are a health check. Reply with JSON only.', user: 'Return exactly this JSON object: {"ok": true}', maxTokens: 50, timeoutMs: 15000});
         const ok = (parseJsonText(answer.text) as {ok?: unknown} | null)?.ok === true;
         return {provider, name: PROVIDER_NAMES[provider], model: answer.model, ok, ...(ok ? {} : {error: 'Answered, but not with the expected JSON.'}), ms: Date.now() - started};
       } catch (error) {

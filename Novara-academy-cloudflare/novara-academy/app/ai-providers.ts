@@ -39,7 +39,8 @@ export class ProviderError extends Error {
   }
 }
 
-export type Prompt = {system: string; user: string; maxTokens: number};
+// timeoutMs: how long to wait for one answer (default 45 seconds); a busy free model should not hold a page.
+export type Prompt = {system: string; user: string; maxTokens: number; timeoutMs?: number};
 
 // The first JSON object in a model's answer, even when wrapped in ```json fences or a sentence.
 export function parseJsonText(text: string): unknown {
@@ -62,7 +63,7 @@ async function openAiCompatible(provider: ProviderId, url: string, key: string, 
   const response = await fetcher(url, {
     method: 'POST',
     headers: {Authorization: `Bearer ${key}`, 'Content-Type': 'application/json'},
-    signal: AbortSignal.timeout(90000),
+    signal: AbortSignal.timeout(prompt.timeoutMs ?? 45000),
     body: JSON.stringify({
       model,
       messages: [{role: 'system', content: prompt.system}, {role: 'user', content: prompt.user}],
@@ -85,16 +86,23 @@ export async function askJson(provider: ProviderId, env: AiEnv, request: Prompt,
     const models = env.GEMINI_MODEL ? [env.GEMINI_MODEL] : ['gemini-flash-latest', 'gemini-flash-lite-latest'];
     let lastError: ProviderError | null = null;
     for (const model of models) {
-      const response = await fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-        method: 'POST',
-        headers: {'x-goog-api-key': env.GEMINI_API_KEY || '', 'Content-Type': 'application/json'},
-        signal: AbortSignal.timeout(90000),
-        body: JSON.stringify({
-          systemInstruction: {parts: [{text: prompt.system}]},
-          contents: [{role: 'user', parts: [{text: prompt.user}]}],
-          generationConfig: {responseMimeType: 'application/json', maxOutputTokens: prompt.maxTokens, temperature: 0.2},
-        }),
-      });
+      let response: Response;
+      try {
+        response = await fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+          method: 'POST',
+          headers: {'x-goog-api-key': env.GEMINI_API_KEY || '', 'Content-Type': 'application/json'},
+          signal: AbortSignal.timeout(prompt.timeoutMs ?? 45000),
+          body: JSON.stringify({
+            systemInstruction: {parts: [{text: prompt.system}]},
+            contents: [{role: 'user', parts: [{text: prompt.user}]}],
+            generationConfig: {responseMimeType: 'application/json', maxOutputTokens: prompt.maxTokens, temperature: 0.2},
+          }),
+        });
+      } catch (error) {
+        // A timeout counts like "high demand": try the lighter model.
+        lastError = new ProviderError('gemini', 504, error instanceof Error ? error.message : 'timed out');
+        continue;
+      }
       const body = (await response.json().catch(() => ({}))) as {error?: {message?: string}; candidates?: {content?: {parts?: {text?: string}[]}}[]};
       if (response.ok) return {text: (body.candidates?.[0]?.content?.parts || []).map(part => part.text || '').join(''), model};
       lastError = new ProviderError('gemini', response.status, body.error?.message || '');
