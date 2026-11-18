@@ -2,7 +2,8 @@
 import {useEffect, useState} from 'react';
 import {ArrowLeft, ExternalLink, Info, Target} from 'lucide-react';
 import {BRAND} from '../../brand';
-import {SiteFooter, SiteHeader, useSessionSat} from '../../site-chrome';
+import {SaveButton, SiteFooter, SiteHeader, useSaved} from '../../site-chrome';
+import {loadJson} from '../../load-json';
 import {
   DATA_VERSION, OWNERSHIP_LABEL, TEST_POLICY_LABEL, chanceFor, formatCount, formatMoney, formatPercent, formatRate, formatSatRange, formatShare,
   parseId, parseSat, type CollegeDetail,
@@ -27,7 +28,9 @@ function satSections(college: CollegeDetail): string | undefined {
 export default function CollegePage() {
   const [college, setCollege] = useState<CollegeDetail | null>(null);
   const [error, setError] = useState('');
-  const [satText, setSatText] = useSessionSat();
+  const [attempt, setAttempt] = useState(0);
+  const {saved, update: updateSaved, toggleCollege} = useSaved();
+  const satText = saved.sat;
   const sat = parseSat(satText);
 
   useEffect(() => {
@@ -37,11 +40,11 @@ export default function CollegePage() {
       return;
     }
     const controller = new AbortController();
-    fetch(`/api/colleges?id=${id}&v=${DATA_VERSION}`, {signal: controller.signal})
-      .then(async response => {
-        const body = await response.json().catch(() => ({}));
-        if (!response.ok || !body.college) throw new Error(body.error || 'College data is temporarily unavailable.');
-        return body.college as CollegeDetail;
+    setError('');
+    loadJson<{college?: CollegeDetail}>(`/api/colleges?id=${id}&v=${DATA_VERSION}`, controller.signal, 'College data is temporarily unavailable.')
+      .then(body => {
+        if (!body.college) throw new Error('College data is temporarily unavailable.');
+        return body.college;
       })
       .then(result => {
         setCollege(result);
@@ -51,7 +54,7 @@ export default function CollegePage() {
         if (!controller.signal.aborted) setError(err instanceof Error ? err.message : 'College data is temporarily unavailable.');
       });
     return () => controller.abort();
-  }, []);
+  }, [attempt]);
 
   const chance = college ? chanceFor(sat, college) : null;
   const ownership = college?.ownership != null ? OWNERSHIP_LABEL[college.ownership] : undefined;
@@ -65,7 +68,7 @@ export default function CollegePage() {
         <a className="quiet cx-back" href="/colleges"><ArrowLeft size={16} /> All colleges</a>
 
         {error ? (
-          <div className="form-error" role="alert">{error}</div>
+          <div className="form-error" role="alert">{error} <button type="button" className="inline-link" onClick={() => setAttempt(n => n + 1)}>Try again</button></div>
         ) : !college ? (
           <div aria-busy="true">
             <div className="cx-skeleton cx-skel-title" />
@@ -77,6 +80,7 @@ export default function CollegePage() {
               <p className="eyebrow">{place.toUpperCase()}{ownership ? ` · ${ownership.toUpperCase()}` : ''}</p>
               <h1>{college.name}</h1>
               <div className="cx-links">
+                <SaveButton saved={saved.colleges.includes(college.id)} onToggle={() => toggleCollege(college.id)} />
                 {college.website && <a className="secondary" href={college.website} target="_blank" rel="noopener noreferrer">Official website <ExternalLink size={16} /></a>}
                 {college.priceCalculator && <a className="secondary" href={college.priceCalculator} target="_blank" rel="noopener noreferrer">Net price calculator <ExternalLink size={16} /></a>}
               </div>
@@ -101,8 +105,9 @@ export default function CollegePage() {
                 <h2 id="chance-title">Where do you stand?</h2>
                 <label className="cx-sat">
                   <span>Your SAT</span>
-                  <input inputMode="numeric" value={satText} onChange={event => setSatText(event.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="e.g. 1450" />
+                  <input inputMode="numeric" value={satText} onChange={event => updateSaved({sat: event.target.value.replace(/\D/g, '').slice(0, 4)})} placeholder="e.g. 1450" />
                 </label>
+                <small className="cx-fine">Saved on this device with your profile and used on every college page. <a className="inline-link" href="/?resume=1">Edit profile</a></small>
                 {chance ? (
                   <div className="cx-chance-result">
                     <span className={`cx-chance ${chance.tone}`}>{chance.label}</span>
