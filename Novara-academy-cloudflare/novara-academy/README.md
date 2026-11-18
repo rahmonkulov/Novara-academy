@@ -77,6 +77,14 @@ The College Explorer needs a free College Scorecard key.
 2. In Cloudflare, open Workers & Pages → `novara-academy` → Settings → Variables and Secrets, and add a **Secret** named `SCORECARD_API_KEY`.
 3. Never commit the key. Without it the Worker falls back to `DEMO_KEY`, which allows only a handful of requests per hour, so the explorer will often show "busy".
 
+## Admissions and scholarships for every university
+
+Hand-checked entries live in `app/admissions-data.ts` (HKUST first). For any other university, its page offers **Find admissions & scholarships**: `app/api/admissions/route.ts` asks OpenAI (Responses API, web search limited to that university's own domain from OpenAlex) for tuition, fees, rounds, English and test requirements, and every scholarship marked automatic or separate application. `app/admissions-ai.ts` drops every link that is not on the official domain, rejects empty answers, and labels the result "Collected by AI" with the date. Results are saved in the `DATA_DB` D1 database, so each university is researched once for everyone and refreshed after 120 days.
+
+- Needs the existing `OPENAI_API_KEY` secret. `ADMISSIONS_MODEL` (or `OPENAI_MODEL`) picks the model; the default is `gpt-5.5`.
+- Cost limits: `ADMISSIONS_DAILY_LIMIT` new universities a day in total (15 in `wrangler.json`) and 3 per visitor a day. Failed searches are not retried for six hours. Set `ADMISSIONS_AI` to `off` in `wrangler.json` to stop new research; saved results still show.
+- `DATA_DB` has no ID in `wrangler.json`: Wrangler creates the `novara-data` database on the first deploy. Tables are created on first use.
+
 ## University data key (OpenAlex)
 
 The University Explorer needs a free OpenAlex key. Without one, every Worker shares OpenAlex's tiny keyless daily budget, so lists and ranks fail most of the day.

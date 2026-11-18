@@ -152,3 +152,11 @@ a.quiet,a.primary,a.secondary,.cx-footer-link{text-decoration:none}
 .wx-chance-text{font-size:14px;line-height:1.75;margin:0}
 .cx-detail-grid .cx-saved-note{margin-top:16px}
 @media(max-width:760px){.welcome-card{padding:18px}.welcome-card .hero-actions>*{width:100%}.wx-facts{grid-template-columns:1fr}.wx-topics .cx-chips{flex-wrap:wrap;margin-right:0;padding-right:0}}
+.wx-ai-label{color:#5b4fa3}
+.dark .wx-ai-label{color:#c4b8ff}
+.wx-ai-note{margin:14px 0 0;padding:12px 14px;border-radius:9px;background:#5b4fa30f;border:1px solid #5b4fa333;font-size:13px;line-height:1.7}
+.wx-research p{margin-top:10px;font-size:14px;line-height:1.8}
+.wx-research-button{display:inline-flex;align-items:center;gap:10px;margin-top:18px}
+.wx-research-busy{display:flex;align-items:center;gap:12px;font-weight:500}
+.wx-spinner{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--foreground);animation:wx-spin .9s linear infinite;flex-shrink:0}
+@keyframes wx-spin{to{transform:rotate(360deg)}}

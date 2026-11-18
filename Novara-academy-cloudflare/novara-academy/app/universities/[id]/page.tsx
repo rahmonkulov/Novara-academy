@@ -1,12 +1,13 @@
 'use client';
-import {useEffect, useState} from 'react';
-import {ArrowLeft, BookOpen, ExternalLink, GraduationCap, Info, ShieldCheck, Target} from 'lucide-react';
+import {useEffect, useRef, useState} from 'react';
+import {ArrowLeft, BookOpen, ExternalLink, GraduationCap, Info, ShieldCheck, Sparkles, Target} from 'lucide-react';
 import {BRAND} from '../../brand';
 import {ProfileNote, SaveButton, SiteFooter, SiteHeader, useProfileSummary, useSaved, type Saved} from '../../site-chrome';
 import {loadJson} from '../../load-json';
 import {parseIelts} from '../../profile-store';
 import {parseSat} from '../../colleges-lib';
 import {ADMISSIONS, type AdmissionsInfo} from '../../admissions-data';
+import type {ResearchState} from '../../admissions-ai';
 import {WORLD_DATA_VERSION, formatCompact, formatRank, parseWorldId, type WorldDetail, type WorldRanks} from '../../world-lib';
 
 function Metric({label, value, note}: {label: string; value: string; note?: string}) {
@@ -46,7 +47,7 @@ function scoreChecks(info: AdmissionsInfo | undefined, saved: Saved): Check[] {
   return checks;
 }
 
-function ChanceBox({info, saved, onScores, name}: {info: AdmissionsInfo | undefined; saved: Saved; onScores: (patch: {sat?: string; ielts?: string}) => void; name: string}) {
+function ChanceBox({info, saved, onScores, name, canResearch, onResearch, busy}: {info: AdmissionsInfo | undefined; saved: Saved; onScores: (patch: {sat?: string; ielts?: string}) => void; name: string; canResearch: boolean; onResearch: () => void; busy: boolean}) {
   const checks = scoreChecks(info, saved);
   return (
     <aside className="cx-chance-box" aria-labelledby="chance-title">
@@ -77,20 +78,31 @@ function ChanceBox({info, saved, onScores, name}: {info: AdmissionsInfo | undefi
       ) : (
         <div className="cx-chance-result">
           <span className="cx-chance unknown">Not checked yet</span>
-          <p>We have not verified {name}’s entry requirements yet, so we will not guess. Your scores stay saved and will be compared here as soon as we add them.</p>
+          <p>{busy ? `Reading ${name}’s website. Your scores are compared here as soon as its requirements are in.` : canResearch ? `Let our AI read ${name}’s official website, and your saved scores are compared with its requirements right here.` : `We have not verified ${name}’s entry requirements yet, so we will not guess. Your scores stay saved and will be compared here as soon as we add them.`}</p>
+          {canResearch && !busy && <button type="button" className="primary wx-research-button" onClick={onResearch}><Sparkles size={18} /> Find admissions &amp; scholarships</button>}
         </div>
       )}
     </aside>
   );
 }
 
-function AdmissionsSection({info}: {info: AdmissionsInfo}) {
+function AdmissionsSection({info, ai, onRefresh}: {info: AdmissionsInfo; ai?: {domain?: string; stale?: boolean}; onRefresh?: () => void}) {
   return (
     <section className="wx-section" aria-labelledby="admissions-title">
       <div className="wx-section-head">
         <h2 id="admissions-title">Admissions and money for international students</h2>
-        <span className="wx-checked"><ShieldCheck size={15} /> Checked {info.checked} · {info.intake}</span>
+        {ai ? (
+          <span className="wx-checked wx-ai-label"><Sparkles size={15} /> Collected by AI · {info.checked} · {info.intake}</span>
+        ) : (
+          <span className="wx-checked"><ShieldCheck size={15} /> Checked by hand · {info.checked} · {info.intake}</span>
+        )}
       </div>
+      {ai && (
+        <p className="wx-ai-note">
+          Our AI read {ai.domain ? <strong>{ai.domain}</strong> : 'the official website'} and copied what it publishes. AI can misread a page, so open the links before you apply or pay anything.
+          {ai.stale && <> This was collected over four months ago, and fees or deadlines may have changed. <button type="button" className="inline-link" onClick={onRefresh}>Check again</button></>}
+        </p>
+      )}
       <div className="cx-metrics wx-facts">
         <Metric label="Tuition" value={info.tuition} />
         {info.livingCost && <Metric label="Living costs" value={info.livingCost} />}
@@ -136,6 +148,45 @@ function AdmissionsSection({info}: {info: AdmissionsInfo}) {
   );
 }
 
+type Research = (ResearchState & {stale?: boolean}) | null;
+
+function ResearchCard({research, name, website, onStart, busy}: {research: Research; name: string; website: string | null; onStart: () => void; busy: boolean}) {
+  const domain = website ? website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/.*$/, '') : 'its official website';
+  if (busy || research?.status === 'running') {
+    return (
+      <section className="wx-section wx-research" aria-live="polite">
+        <h2>Admissions and money for international students</h2>
+        <p className="wx-research-busy"><span className="wx-spinner" aria-hidden="true" /> Reading {domain}: tuition, deadlines, English requirements and scholarships…</p>
+        <p className="helper">This usually takes under a minute. It is saved for everyone, so nobody waits for {name} again.</p>
+      </section>
+    );
+  }
+  if (research?.status === 'failed') {
+    return (
+      <section className="wx-section wx-pending">
+        <h2>Admissions and money for international students</h2>
+        <p>{research.error} Until then, the official website is the place to look.</p>
+      </section>
+    );
+  }
+  if (research?.status === 'none' && research.canResearch && website) {
+    return (
+      <section className="wx-section wx-research">
+        <h2>Admissions and money for international students</h2>
+        <p>Nobody has checked {name} yet. Our AI can read {domain} now and fill this in for you: tuition, application fee, deadlines, English and test requirements, and every scholarship, with a link to each official page.</p>
+        <button type="button" className="primary wx-research-button" onClick={onStart}><Sparkles size={18} /> Find admissions &amp; scholarships</button>
+        <p className="helper">Free. It is saved for every student, so you only wait once.</p>
+      </section>
+    );
+  }
+  return (
+    <section className="wx-section wx-pending">
+      <h2>Admissions and money for international students</h2>
+      <p>We have not checked this university’s tuition, scholarships and deadlines yet. Until then, the official website is the place to look.</p>
+    </section>
+  );
+}
+
 export default function UniversityPage() {
   const [university, setUniversity] = useState<WorldDetail | null>(null);
   const [ranks, setRanks] = useState<WorldRanks>({country: null, world: null});
@@ -143,6 +194,9 @@ export default function UniversityPage() {
   const [attempt, setAttempt] = useState(0);
   const {saved, update: updateSaved, toggleUniversity} = useSaved();
   const profile = useProfileSummary();
+  const [research, setResearch] = useState<Research>(null);
+  const [busy, setBusy] = useState(false);
+  const polls = useRef(0);
 
   useEffect(() => {
     const id = parseWorldId(window.location.pathname.split('/').filter(Boolean).pop());
@@ -168,7 +222,51 @@ export default function UniversityPage() {
     return () => controller.abort();
   }, [attempt]);
 
-  const info = university ? ADMISSIONS[university.id] : undefined;
+  // Admissions details: hand-checked entries first, then anything the AI already collected.
+  useEffect(() => {
+    if (!university) return;
+    if (ADMISSIONS[university.id]) {
+      setResearch({status: 'ready', source: 'checked', info: ADMISSIONS[university.id]});
+      return;
+    }
+    const controller = new AbortController();
+    fetch(`/api/admissions?id=${university.id}`, {signal: controller.signal})
+      .then(response => response.json() as Promise<Research>)
+      .then(state => setResearch(state && 'status' in state ? state : {status: 'none', canResearch: false}))
+      .catch(() => {
+        if (!controller.signal.aborted) setResearch({status: 'none', canResearch: false});
+      });
+    return () => controller.abort();
+  }, [university]);
+
+  // While another visitor's research is running, check back every few seconds.
+  useEffect(() => {
+    if (!university || research?.status !== 'running' || busy) return;
+    if ((polls.current ?? 0) >= 40) return;
+    const timer = setTimeout(() => {
+      polls.current = (polls.current ?? 0) + 1;
+      fetch(`/api/admissions?id=${university.id}`)
+        .then(response => response.json() as Promise<Research>)
+        .then(state => setResearch(state))
+        .catch(() => undefined);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [research, university, busy]);
+
+  const startResearch = () => {
+    if (!university || busy) return;
+    setBusy(true);
+    fetch('/api/admissions', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: university.id})})
+      .then(async response => {
+        const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+        if (typeof body.status === 'string') setResearch(body as unknown as Research);
+        else setResearch({status: 'failed', error: typeof body.error === 'string' ? body.error : 'We could not do this right now. Please try again later.'});
+      })
+      .catch(() => setResearch({status: 'failed', error: 'The connection dropped. Please try again.'}))
+      .finally(() => setBusy(false));
+  };
+
+  const info = research?.status === 'ready' ? research.info : undefined;
   const place = university ? [...new Set([university.city, university.country].filter(Boolean))].join(', ') : '';
 
   return (
@@ -214,16 +312,13 @@ export default function UniversityPage() {
                   </section>
                 )}
               </div>
-              <ChanceBox info={info} saved={saved} onScores={updateSaved} name={university.name} />
+              <ChanceBox info={info} saved={saved} onScores={updateSaved} name={university.name} canResearch={research?.status === 'none' && research.canResearch && Boolean(university.website)} onResearch={startResearch} busy={busy} />
             </section>
 
-            {info ? (
-              <AdmissionsSection info={info} />
+            {research?.status === 'ready' && !busy ? (
+              <AdmissionsSection info={research.info} ai={research.source === 'ai' ? {domain: research.domain, stale: research.stale} : undefined} onRefresh={startResearch} />
             ) : (
-              <section className="wx-section wx-pending">
-                <h2>Admissions and money for international students</h2>
-                <p>We have not checked this university’s tuition, scholarships and deadlines yet. Until then, the official website is the place to look{university.countryCode === 'US' ? ', and the US admissions data has acceptance rates and SAT ranges' : ''}.</p>
-              </section>
+              <ResearchCard research={research} name={university.name} website={university.website} onStart={startResearch} busy={busy} />
             )}
 
             {university.related.length > 0 && (
