@@ -4,7 +4,7 @@
 
 export const SCORECARD_URL = 'https://api.data.gov/ed/collegescorecard/v1/schools';
 // Bump when filter rules or the response shape change, so cached answers from older versions are not reused.
-export const DATA_VERSION = 2;
+export const DATA_VERSION = 3;
 export const PER_PAGE = 24;
 export const MAX_PAGE = 199;
 // Very small institutions (mostly single-subject religious schools) are hidden unless the student searches by name.
@@ -44,6 +44,14 @@ export const CONTROLS: Record<string, Option> = {
   private: { label: 'Private nonprofit', value: '2' },
 };
 
+// Curated lists. Ivy League IDs checked against College Scorecard (November 2026).
+export const IVY_LEAGUE_IDS = [166027, 130794, 186131, 190150, 215062, 217156, 182670, 190415];
+export const MAX_IDS = 60;
+export const LISTS: Record<string, Option> = {
+  ivy: { label: 'Ivy League', value: 'ivy' },
+  saved: { label: 'My list', value: 'saved' },
+};
+
 export const DEFAULT_SORT = 'selective';
 export const SORTS: Record<string, Option> = {
   selective: { label: 'Most selective first', value: 'latest.admissions.admission_rate.overall:asc' },
@@ -81,8 +89,8 @@ const F = {
 const LIST_FIELDS = [F.id, F.name, F.city, F.state, F.ownership, F.admitRate, F.satReading25, F.satReading75, F.satMath25, F.satMath75, F.size, F.intlShare];
 const DETAIL_FIELDS = Object.values(F);
 
-export type ListQuery = { q: string; state: string; sel: string; size: string; control: string; sort: string; page: number };
-export const EMPTY_QUERY: ListQuery = { q: '', state: '', sel: '', size: '', control: '', sort: DEFAULT_SORT, page: 0 };
+export type ListQuery = { q: string; state: string; sel: string; size: string; control: string; sort: string; page: number; list: string; ids: number[] };
+export const EMPTY_QUERY: ListQuery = { q: '', state: '', sel: '', size: '', control: '', sort: DEFAULT_SORT, page: 0, list: '', ids: [] };
 
 const known = (value: string | null, options: Record<string, Option>): string =>
   value && Object.prototype.hasOwnProperty.call(options, value) ? value : '';
@@ -102,7 +110,14 @@ export function parseListQuery(params: URLSearchParams): ListQuery {
     control: known(params.get('control'), CONTROLS),
     sort: known(params.get('sort'), SORTS) || DEFAULT_SORT,
     page: Number.isFinite(page) ? Math.min(Math.max(page, 0), MAX_PAGE) : 0,
+    list: known(params.get('list'), LISTS),
+    ids: parseIds(params.get('ids')),
   };
+}
+
+export function parseIds(value: string | null): number[] {
+  const ids = (value || '').split(',').filter(part => /^\d{5,8}$/.test(part)).map(Number);
+  return [...new Set(ids)].slice(0, MAX_IDS);
 }
 
 export function queryToSearch(query: ListQuery): string {
@@ -114,12 +129,34 @@ export function queryToSearch(query: ListQuery): string {
   if (query.control) params.set('control', query.control);
   if (query.sort && query.sort !== DEFAULT_SORT) params.set('sort', query.sort);
   if (query.page) params.set('page', String(query.page));
+  if (query.list) params.set('list', query.list);
+  return params.toString();
+}
+
+// The API request: page filters plus the college IDs behind a curated list or the student's saved list.
+export function apiSearch(query: ListQuery, savedIds: number[]): string {
+  const params = new URLSearchParams(queryToSearch(query));
+  params.delete('list');
+  if (query.list === 'ivy') params.set('ids', IVY_LEAGUE_IDS.join(','));
+  if (query.list === 'saved') params.set('ids', savedIds.slice(0, MAX_IDS).join(','));
   return params.toString();
 }
 
 // Only four-year (bachelor's) colleges that are open, report an admission rate and, unless the student
 // searches by name, have at least MIN_UNDERGRADS undergraduates.
 export function buildListUrl(query: ListQuery, apiKey: string): string {
+  if (query.ids.length) {
+    // A fixed set of colleges (Ivy League or the student's list): no other filters, so every one shows.
+    const params = new URLSearchParams({
+      api_key: apiKey,
+      id: query.ids.join(','),
+      sort: (SORTS[query.sort] || SORTS[DEFAULT_SORT]).value,
+      per_page: String(PER_PAGE),
+      page: String(query.page),
+      fields: LIST_FIELDS.join(','),
+    });
+    return `${SCORECARD_URL}?${params}`;
+  }
   const params = new URLSearchParams({
     api_key: apiKey,
     'school.degrees_awarded.predominant': '3',
