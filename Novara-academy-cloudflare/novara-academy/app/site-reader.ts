@@ -14,8 +14,10 @@ const KEYWORDS: [RegExp, number][] = [
   [/requirement|entry|eligib|qualification/i, 3],
   [/apply|application|deadline/i, 2],
   [/english|ielts|toefl|\bsat\b/i, 2],
+  [/ranking|ranked/i, 2],
+  [/employ|graduate outcome|career/i, 2],
 ];
-const PENALTIES = /postgrad|graduate school|phd|doctor|master|mba|alumni|news|event|calendar|login|career|staff|faculty-profile|research-/i;
+const PENALTIES = /postgrad|graduate school|phd|doctor|master|mba|alumni|event|calendar|login|vacanc|staff|faculty-profile|research-/i;
 const SKIP = /\.(pdf|jpe?g|png|gif|svg|webp|zip|docx?|xlsx?|pptx?|mp4|mp3)(\?|$)/i;
 
 export const MAX_PAGES = 12;

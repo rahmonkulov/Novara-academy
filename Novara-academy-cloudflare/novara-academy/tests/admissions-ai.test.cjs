@@ -23,7 +23,9 @@ test('only the university’s own website counts',()=>{
 
 const good={found:true,intake:'Fall 2027 entry',tuition:'HK$182,000 per year (2027/28)',livingCost:null,applicationFee:'HK$450',rounds:['Early round: Nov 15, 2026'],english:'IELTS 6.5',ieltsMin:'6.5',satMin:1355,satNote:'Reference only',tests:'SAT, A-level, IB',
   scholarships:[{name:'Entrance Scholarship',amount:'Up to full tuition',howToApply:'automatic',details:'Considered with the application.',deadline:null,url:'https://admissions.hku.hk/scholarships'},{name:'Copied award',amount:'?',howToApply:'separate',details:'Off-site page',deadline:null,url:'https://scholarship-list.example/hku'}],
-  chances:null,applyUrl:'https://apply.example/hku',sources:[{label:'Fees',url:'https://admissions.hku.hk/fees'},{label:'Blog',url:'https://blog.example/'}]};
+  chances:null,applyUrl:'https://apply.example/hku',sources:[{label:'Fees',url:'https://admissions.hku.hk/fees'},{label:'Blog',url:'https://blog.example/'}],
+  rankings:[{name:'QS World University Rankings 2027',rank:'#11',url:'https://www.hku.hk/news/qs-2027'},{name:'Made-up ranking',rank:'#1',url:'https://rankings.example/hku'}],
+  employment:{headline:'95% employed or studying',detail:'Class of 2025, surveyed in December',url:'https://cedars.hku.hk/graduate-survey'}};
 
 test('answers are checked: off-site links, made-up numbers and empty answers are dropped',()=>{
   const info=plain(ai.toAdmissionsInfo(good,'hku.hk',new Date('2026-11-18T00:00:00Z')));
@@ -34,6 +36,11 @@ test('answers are checked: off-site links, made-up numbers and empty answers are
   assert.equal(info.applyUrl,'https://hku.hk');
   assert.equal(info.ieltsMin,6.5);
   assert.equal(info.satMin,undefined);
+  assert.deepEqual(info.rankings,[{name:'QS World University Rankings 2027',rank:'#11',url:'https://www.hku.hk/news/qs-2027'}]);
+  assert.deepEqual(info.employment,{headline:'95% employed or studying',detail:'Class of 2025, surveyed in December',url:'https://cedars.hku.hk/graduate-survey'});
+  const offSite=plain(ai.toAdmissionsInfo({...good,employment:{headline:'99% employed',url:'https://ads.example/'},rankings:null},'hku.hk',new Date()));
+  assert.equal(offSite.employment,undefined);
+  assert.equal(offSite.rankings,undefined);
   assert.equal(ai.toAdmissionsInfo({...good,found:false},'hku.hk',new Date()),null);
   assert.equal(ai.toAdmissionsInfo({...good,tuition:'Not published',scholarships:[],rounds:[]},'hku.hk',new Date()),null);
   assert.equal(ai.toAdmissionsInfo('nonsense','hku.hk',new Date()),null);

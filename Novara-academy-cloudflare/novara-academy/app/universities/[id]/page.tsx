@@ -1,6 +1,6 @@
 'use client';
 import {useEffect, useRef, useState} from 'react';
-import {ArrowLeft, BookOpen, ExternalLink, GraduationCap, Info, ShieldCheck, Sparkles, Target} from 'lucide-react';
+import {ArrowLeft, BookOpen, ExternalLink, GraduationCap, Info, MessageCircle, ShieldCheck, Sparkles, Target, Trophy} from 'lucide-react';
 import {BRAND} from '../../brand';
 import {ProfileNote, SaveButton, SiteFooter, SiteHeader, useProfileSummary, useSaved, type Saved} from '../../site-chrome';
 import {loadJson} from '../../load-json';
@@ -119,6 +119,14 @@ function AdmissionsSection({info: raw, ai, onRefresh}: {info: AdmissionsInfo; ai
       )}
       <div className="cx-metrics wx-facts">
         <Metric label="Tuition" value={info.tuition} />
+        {info.employment && (
+          <div className="cx-metric wx-employment">
+            <span>Jobs after graduation</span>
+            <strong>{info.employment.headline}</strong>
+            {info.employment.detail && <small>{info.employment.detail}</small>}
+            <a className="inline-link" href={info.employment.url} target="_blank" rel="noopener noreferrer">Source <ExternalLink size={12} /></a>
+          </div>
+        )}
         {info.livingCost && <Metric label="Living costs" value={info.livingCost} />}
         <Metric label="Application fee" value={info.applicationFee} />
         <Metric label="English" value={info.english} />
@@ -322,11 +330,21 @@ export default function UniversityPage() {
               </div>
             </section>
 
+            {research?.status === 'ready' && research.info.rankings?.length ? (
+              <section className="wx-rankings" aria-label="Rankings">
+                <Trophy size={16} />
+                {research.info.rankings.map(item => (
+                  <a className="wx-ranking" key={item.name} href={item.url} target="_blank" rel="noopener noreferrer"><strong>{item.rank}</strong> {item.name}</a>
+                ))}
+                <span className="wx-ranking-note">As the university states it</span>
+              </section>
+            ) : null}
+
             <section className="cx-detail-grid">
               <div>
                 <div className="cx-metrics wx-metrics" aria-label="Research strength">
-                  <Metric label={`Rank in ${university.country || 'its country'}`} value={formatRank(ranks.country)} note="By research citations" />
-                  <Metric label="Rank worldwide" value={formatRank(ranks.world)} note="Among 30,000+ universities" />
+                  <Metric label={`Research rank in ${university.country || 'its country'}`} value={formatRank(ranks.country)} note="By research citations" />
+                  <Metric label="Research rank worldwide" value={formatRank(ranks.world)} note="Among 30,000+ universities" />
                   <Metric label="Citations" value={formatCompact(university.citations)} note="Times its research was cited" />
                   <Metric label="Research papers" value={formatCompact(university.works)} />
                 </div>
@@ -346,6 +364,12 @@ export default function UniversityPage() {
             ) : (
               <ResearchCard research={research} name={university.name} website={university.website} onStart={startResearch} busy={busy} />
             )}
+
+            <section className="wx-students" aria-labelledby="students-title">
+              <h3 className="wx-subtitle" id="students-title"><MessageCircle size={16} /> What students say</h3>
+              <p className="helper">Reviews written by students on {BRAND.short} are coming. Until then, read what real students say about {university.name} on Reddit.</p>
+              <a className="secondary" href={`https://www.reddit.com/search/?q=${encodeURIComponent(`"${university.name}"`)}`} target="_blank" rel="noopener noreferrer">Student discussions on Reddit <ExternalLink size={16} /></a>
+            </section>
 
             {university.related.length > 0 && (
               <section className="wx-related" aria-label="Related campuses and universities">

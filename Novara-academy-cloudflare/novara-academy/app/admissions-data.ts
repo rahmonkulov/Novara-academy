@@ -27,6 +27,10 @@ export type AdmissionsInfo = {
   tests: string;
   scholarships: Scholarship[];
   chances?: string;
+  // Rankings exactly as the university states them on its own pages, each with that page.
+  rankings?: {name: string; rank: string; url: string}[];
+  // Graduate employment as the university publishes it: a short headline, what it counts, and the source.
+  employment?: {headline: string; detail?: string; url: string};
   applyUrl: string;
   sources: {label: string; url: string}[];
 };
@@ -86,6 +90,14 @@ export const ADMISSIONS: Record<string, AdmissionsInfo> = {
         url: 'https://join.hkust.edu.hk/scholarship-scheme-for-international/asian-olympiad-medalists',
       },
     ],
+    rankings: [
+      {name: 'QS World University Rankings 2027', rank: '#33', url: 'https://ais.hkust.edu.hk/node/3122'},
+    ],
+    employment: {
+      headline: '94.7% working, studying further or returned home',
+      detail: 'Class of 2025 bachelor’s graduates, surveyed by December 2025. 62.7% were in full-time jobs or self-employed; 2.3% were still looking for work.',
+      url: 'https://career.hkust.edu.hk/web/public/documents/ExecutiveSummary_UG_2025.pdf',
+    },
     chances: 'Meeting the minimums makes you eligible, not admitted. Scholarships go to the strongest profiles. Apply in the priority round (by Nov 25, 2026): the Future Leaders Award requires it, and offers start in late December.',
     applyUrl: 'https://join.hkust.edu.hk/apply',
     sources: [
