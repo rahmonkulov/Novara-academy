@@ -15,5 +15,8 @@
       "binding": "DATA_DB",
       "database_name": "novara-data"
     }
-  ]
+  ],
+  "ai": {
+    "binding": "AI"
+  }
 }

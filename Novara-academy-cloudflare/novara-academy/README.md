@@ -79,11 +79,17 @@ The College Explorer needs a free College Scorecard key.
 
 ## Admissions and scholarships for every university
 
-Hand-checked entries live in `app/admissions-data.ts` (HKUST first). For any other university, its page offers **Find admissions & scholarships**: `app/api/admissions/route.ts` asks OpenAI (Responses API, web search limited to that university's own domain from OpenAlex) for tuition, fees, rounds, English and test requirements, and every scholarship marked automatic or separate application. `app/admissions-ai.ts` drops every link that is not on the official domain, rejects empty answers, and labels the result "Collected by AI" with the date. Results are saved in the `DATA_DB` D1 database, so each university is researched once for everyone and refreshed after 120 days.
+Hand-checked entries live in `app/admissions-data.ts` (HKUST first). For any other university, its page offers **Find admissions & scholarships**:
 
-- Needs the existing `OPENAI_API_KEY` secret. `ADMISSIONS_MODEL` (or `OPENAI_MODEL`) picks the model; the default is `gpt-5.5`.
-- Cost limits: `ADMISSIONS_DAILY_LIMIT` new universities a day in total (15 in `wrangler.json`) and 3 per visitor a day. Failed searches are not retried for six hours. Set `ADMISSIONS_AI` to `off` in `wrangler.json` to stop new research; saved results still show.
-- `DATA_DB` has no ID in `wrangler.json`: Wrangler creates the `novara-data` database on the first deploy. Tables are created on first use.
+1. `app/site-reader.ts` opens the university's official website (domain from OpenAlex), follows the links most likely to cover international undergraduate admissions, fees and scholarships, and keeps the useful text of up to 9 pages on that domain.
+2. `app/ai-providers.ts` asks an AI to pull out tuition, fees, rounds, English and test requirements, and every scholarship marked automatic or separate application, using only that text. Providers are tried in order: **Gemini** (`GEMINI_API_KEY`, free key from aistudio.google.com), **Cloudflare Workers AI** (the `AI` binding: no key, 10,000 free Neurons a day), **Groq** (`GROQ_API_KEY`, free key), **OpenAI** (`OPENAI_API_KEY`, paid). Models can be changed with `GEMINI_MODEL`, `WORKERS_AI_MODEL`, `GROQ_MODEL` and `OPENAI_MODEL`.
+3. `app/admissions-ai.ts` drops every link that is not on the official domain, rejects empty answers, and labels the result "Collected by AI" with the date.
+
+Results are saved in the `DATA_DB` D1 database, so each university is researched once for everyone and refreshed after 120 days.
+
+- Limits: `ADMISSIONS_DAILY_LIMIT` new universities a day in total (15 in `wrangler.json`) and 3 per visitor a day. A search that finds nothing waits six hours; an AI service error waits ten minutes. Set `ADMISSIONS_AI` to `off` in `wrangler.json` to stop new research; saved results still show.
+- `DATA_DB` has no ID in `wrangler.json`: Wrangler created the `novara-data` database on the first deploy. Tables are created on first use.
+- Websites that block automatic reading or build their pages only with JavaScript cannot be read; the page then says so.
 
 ## University data key (OpenAlex)
 
