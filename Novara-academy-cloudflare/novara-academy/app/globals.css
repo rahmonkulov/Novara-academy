@@ -160,3 +160,6 @@ a.quiet,a.primary,a.secondary,.cx-footer-link{text-decoration:none}
 .wx-research-busy{display:flex;align-items:center;gap:12px;font-weight:500}
 .wx-spinner{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--foreground);animation:wx-spin .9s linear infinite;flex-shrink:0}
 @keyframes wx-spin{to{transform:rotate(360deg)}}
+.cx-filters-5{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media(max-width:1100px){.cx-filters-5{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){.cx-filters-5{grid-template-columns:1fr 1fr}}

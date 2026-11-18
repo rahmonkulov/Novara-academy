@@ -7,8 +7,7 @@ import {ADMISSIONS} from '../admissions-data';
 import {
   EMPTY_WORLD_QUERY, REGIONS, WORLD_CHIPS, WORLD_DATA_VERSION, WORLD_DEFAULT_SORT, WORLD_MAX_PAGE, WORLD_PER_PAGE, WORLD_SORTS,
   cleanWorldSearch, formatCompact, parseWorldQuery, worldApiSearch, worldQueryToSearch,
-  type Country, type WorldOption, type WorldQuery, type WorldUniversity,
-} from '../world-lib';
+  type Country, type WorldOption, type WorldQuery, type WorldUniversity, US_COUNTRY} from '../world-lib';
 
 type ListResponse = {total: number; page: number; perPage: number; results: WorldUniversity[]};
 
@@ -59,6 +58,11 @@ export default function UniversityExplorer() {
 
   useEffect(() => {
     const initial = parseWorldQuery(new URLSearchParams(window.location.search));
+    // US universities live in the US list, which has admissions data.
+    if (initial.country === US_COUNTRY) {
+      window.location.replace('/colleges');
+      return;
+    }
     setQuery({...initial, ids: []});
     setSearchText(initial.q);
     setReady(true);
@@ -138,6 +142,7 @@ export default function UniversityExplorer() {
         <nav className="cx-chips" aria-label="Categories">
           <button type="button" className={`cx-chip${plain ? ' cx-chip-active' : ''}`} aria-pressed={plain} onClick={() => choose({})}>All</button>
           {WORLD_CHIPS.map(chip => {
+            if (chip.href) return <a key={chip.key} className="cx-chip" href={chip.href}>{chip.label}</a>;
             const active = !listMode && !query.q && (chip.region ? query.region === chip.region && !query.country : query.country === chip.country && !query.region);
             return (
               <button key={chip.key} type="button" className={`cx-chip${active ? ' cx-chip-active' : ''}`} aria-pressed={active} onClick={() => choose(chip.region ? {region: chip.region} : {country: chip.country})}>
@@ -145,7 +150,6 @@ export default function UniversityExplorer() {
               </button>
             );
           })}
-          <a className="cx-chip cx-chip-link" href="/colleges"><GraduationCap size={14} /> USA (admissions data)</a>
           <button type="button" className={`cx-chip${listMode ? ' cx-chip-active' : ''}`} aria-pressed={listMode} onClick={() => choose({list: 'saved'})}>
             <Star size={14} />My list{saved.universities.length ? ` (${saved.universities.length})` : ''}
           </button>
@@ -164,16 +168,13 @@ export default function UniversityExplorer() {
           </label>
           {!listMode && (
             <div className="cx-filters wx-filters">
-              <FilterSelect label="Country" value={query.country} onChange={country => update({country})} options={countryOptions} anyLabel="All countries" />
+              <FilterSelect label="Country" value={query.country} onChange={country => (country === US_COUNTRY ? window.location.assign('/colleges') : update({country}))} options={countryOptions} anyLabel="All countries" />
               <FilterSelect label="Region" value={query.region} onChange={region => update({region})} options={toOptions(REGIONS)} anyLabel="All regions" />
             </div>
           )}
           <ProfileNote saved={saved} summary={profile} />
         </section>
 
-        {query.country === 'US' && (
-          <div className="wx-banner"><GraduationCap size={18} /><p>For US colleges, the <a className="inline-link" href="/colleges">US explorer</a> has acceptance rates, SAT ranges, costs and your reach/target/likely guide.</p></div>
-        )}
 
         <div className="cx-results-bar" ref={resultsTop}>
           <p aria-live="polite">

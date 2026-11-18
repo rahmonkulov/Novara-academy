@@ -30,16 +30,21 @@ export const WORLD_SORTS: Record<string, WorldOption> = {
 };
 export const WORLD_DEFAULT_SORT = 'impact';
 
-// Quick categories shown as chips. "Top" means sorted by research citations within that region.
-export const WORLD_CHIPS: ReadonlyArray<{key: string; label: string; region?: string; country?: string}> = [
+// Quick categories shown as chips. "Top" means sorted by research citations within that region. US chips open
+// the US list (/colleges), which has admissions data: acceptance rates, SAT ranges and costs.
+export const US_COUNTRY = 'US';
+export const WORLD_CHIPS: ReadonlyArray<{key: string; label: string; region?: string; country?: string; href?: string}> = [
   {key: 'top-asia', label: 'Top Asia', region: 'asia'},
   {key: 'top-europe', label: 'Top Europe', region: 'europe'},
+  {key: 'top-usa', label: 'Top USA', href: '/colleges?sel=under10'},
+  {key: 'ivy', label: 'Ivy League', href: '/colleges?list=ivy'},
   {key: 'middle-east', label: 'Middle East', region: 'middle_east'},
   {key: 'HK', label: 'Hong Kong', country: 'HK'},
   {key: 'CN', label: 'China', country: 'CN'},
   {key: 'KR', label: 'South Korea', country: 'KR'},
   {key: 'JP', label: 'Japan', country: 'JP'},
   {key: 'SG', label: 'Singapore', country: 'SG'},
+  {key: 'US', label: 'United States', href: '/colleges'},
   {key: 'GB', label: 'United Kingdom', country: 'GB'},
   {key: 'TR', label: 'Turkey', country: 'TR'},
   {key: 'UZ', label: 'Uzbekistan', country: 'UZ'},
