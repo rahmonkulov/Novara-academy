@@ -5,6 +5,8 @@
 export const SCORECARD_URL = 'https://api.data.gov/ed/collegescorecard/v1/schools';
 export const PER_PAGE = 24;
 export const MAX_PAGE = 199;
+// Very small institutions (mostly single-subject religious schools) are hidden unless the student searches by name.
+export const MIN_UNDERGRADS = 300;
 
 export const STATES: ReadonlyArray<readonly [string, string]> = [
   ['AL', 'Alabama'], ['AK', 'Alaska'], ['AZ', 'Arizona'], ['AR', 'Arkansas'], ['CA', 'California'],
@@ -30,7 +32,7 @@ export const SELECTIVITY: Record<string, Option> = {
 };
 
 export const SIZES: Record<string, Option> = {
-  small: { label: 'Small (under 5,000)', value: '0..4999' },
+  small: { label: 'Small (under 5,000)', value: `${MIN_UNDERGRADS}..4999` },
   medium: { label: 'Medium (5,000–15,000)', value: '5000..15000' },
   large: { label: 'Large (over 15,000)', value: '15001..2000000' },
 };
@@ -113,7 +115,8 @@ export function queryToSearch(query: ListQuery): string {
   return params.toString();
 }
 
-// Only four-year (bachelor's) colleges that are open and report an admission rate.
+// Only four-year (bachelor's) colleges that are open, report an admission rate and, unless the student
+// searches by name, have at least MIN_UNDERGRADS undergraduates.
 export function buildListUrl(query: ListQuery, apiKey: string): string {
   const params = new URLSearchParams({
     api_key: apiKey,
@@ -127,6 +130,7 @@ export function buildListUrl(query: ListQuery, apiKey: string): string {
     fields: LIST_FIELDS.join(','),
   });
   if (query.size) params.set(`${F.size}__range`, SIZES[query.size].value);
+  else if (!query.q) params.set(`${F.size}__range`, `${MIN_UNDERGRADS}..2000000`);
   if (query.state) params.set('school.state', query.state);
   if (query.q) params.set('school.name', query.q);
   return `${SCORECARD_URL}?${params}`;

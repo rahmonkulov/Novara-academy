@@ -31,6 +31,9 @@ test('College Scorecard list URL applies filters and safe defaults',()=>{
   assert.equal(defaults.get('latest.admissions.admission_rate.overall__range'),'0..1');
   assert.equal(defaults.get('sort'),'latest.admissions.admission_rate.overall:asc');
   assert.equal(defaults.get('school.name'),null);
+  assert.equal(defaults.get('latest.student.size__range'),'300..2000000');
+  assert.equal(new URL(lib.buildListUrl(lib.parseListQuery(new URLSearchParams('q=yeshiva')),'KEY')).searchParams.get('latest.student.size__range'),null);
+  assert.equal(new URL(lib.buildListUrl(lib.parseListQuery(new URLSearchParams('size=small')),'KEY')).searchParams.get('latest.student.size__range'),'300..4999');
   assert.equal(lib.parseId('166027'),166027);
   assert.equal(lib.parseId('16602x'),null);
   assert.equal(new URL(lib.buildDetailUrl(166027,'KEY')).searchParams.get('id'),'166027');

@@ -107,7 +107,7 @@ Verification confirms email ownership for the current UI session. It does not cr
 ## Validation and known limits
 
 - The College Explorer update passed the unit tests (`pnpm run test`) and a syntax check, but it was written without installed dependencies, so its first full TypeScript check and production build run on Cloudflare. Check the build log after merging.
-- College Explorer limits: US four-year colleges only. Scorecard figures can lag one to two years. The SAT middle 50% adds the two section ranges. The reach / target / likely guide uses only the SAT and the admission rate, and any college admitting under 15% is always a reach.
+- College Explorer limits: US four-year colleges only. Colleges with fewer than 300 undergraduates are hidden unless the student searches by name. Scorecard figures can lag one to two years. The SAT middle 50% adds the two section ranges. The reach / target / likely guide uses only the SAT and the admission rate, and any college admitting under 15% is always a reach.
 - Offline email integration tests execute real SQLite statements with a mocked delivery provider. They check verification, reuse, expired codes, attempt limits, resend limits, origin rejection and missing configuration.
 - Profile tests verify country selection, gap year and structured qualification validation.
 - A live OpenAI assessment and real email delivery have **not** been verified in this workspace. The owner must test the deployed account before claiming either works end to end.

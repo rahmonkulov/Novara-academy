@@ -185,7 +185,7 @@ export default function CollegeExplorer() {
 
         <div className="prototype-note cx-source">
           <Info size={18} />
-          <p>Data: <strong>U.S. Department of Education College Scorecard</strong>, latest figures available, for four-year colleges that report an admission rate. Figures can lag a year or two, so confirm on each college’s website. Reach, target and likely use only your SAT and the admission rate; treat them as a rough guide, not a prediction.</p>
+          <p>Data: <strong>U.S. Department of Education College Scorecard</strong>, latest figures available, for four-year colleges that report an admission rate. Colleges with fewer than 300 undergraduates appear only when you search by name. Figures can lag a year or two, so confirm on each college’s website. Reach, target and likely use only your SAT and the admission rate; treat them as a rough guide, not a prediction.</p>
         </div>
       </main>
       <SiteFooter />
