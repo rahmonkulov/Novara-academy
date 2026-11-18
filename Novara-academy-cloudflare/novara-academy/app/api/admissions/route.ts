@@ -23,7 +23,7 @@ type Config = {
   OPENALEX_API_KEY?: string;
   DATA_DB?: D1Database;
 };
-type Row = {status: string; data: string | null; error: string | null; domain: string | null; updated: number; started: number | null; failed: number | null};
+type Row = {status: string; data: string | null; error: string | null; domain: string | null; updated: number; started: number | null; failed: number | null; retry_after: number | null; detail: string | null};
 
 const config = () => env as unknown as Config;
 const now = () => Math.floor(Date.now() / 1000);
@@ -31,11 +31,16 @@ const reply = (body: ResearchState | {error: string}, status = 200) =>
   Response.json(body, {status, headers: {'Cache-Control': 'no-store'}});
 const canResearch = (c: Config) => Boolean(c.OPENAI_API_KEY && c.DATA_DB && c.ADMISSIONS_AI !== 'off');
 
+// "content" failures (the site does not publish the details) wait FAILED_RETRY_SECONDS before another try;
+// "service" failures (the AI or data service had a problem) can be retried after SERVICE_RETRY_SECONDS.
+const SERVICE_RETRY_SECONDS = 10 * 60;
 class ResearchError extends Error {
-  constructor(message: string, readonly detail = '') {
+  constructor(message: string, readonly detail = '', readonly kind: 'content' | 'service' = 'content') {
     super(message);
   }
 }
+// Error text from other services, kept for debugging without anything that looks like a key.
+const cleanDetail = (text: string) => text.replace(/\b(sk|key|token)[-_a-z0-9]{8,}/gi, '[hidden]').slice(0, 300);
 
 let tables: Promise<unknown> | null = null;
 function ensureTables(db: D1Database) {
@@ -44,6 +49,12 @@ function ensureTables(db: D1Database) {
       db.prepare('CREATE TABLE IF NOT EXISTS admissions_ai (id TEXT PRIMARY KEY, status TEXT NOT NULL, data TEXT, error TEXT, domain TEXT, model TEXT, updated INTEGER NOT NULL DEFAULT 0, started INTEGER, failed INTEGER)'),
       db.prepare('CREATE TABLE IF NOT EXISTS ai_limits (key TEXT PRIMARY KEY, count INTEGER NOT NULL, expires INTEGER NOT NULL)'),
     ])
+    .then(async () => {
+      // Columns added after the first release. "duplicate column" errors just mean they exist already.
+      for (const column of ['retry_after INTEGER', 'detail TEXT']) {
+        await db.prepare(`ALTER TABLE admissions_ai ADD COLUMN ${column}`).run().catch(() => undefined);
+      }
+    })
     .catch(error => {
       tables = null;
       throw error;
@@ -63,14 +74,14 @@ function stateOf(row: Row | null, at: number, research: boolean): ResearchState 
       ...(at - row.updated > RESEARCH_TTL_DAYS * 86400 ? {stale: true} : {}),
     };
   }
-  if (row?.status === 'failed' && row.failed && at - row.failed < FAILED_RETRY_SECONDS) {
-    return {status: 'failed', error: row.error || 'We could not read this university’s website.'};
+  if (row?.status === 'failed' && row.retry_after && at < row.retry_after) {
+    return {status: 'failed', error: row.error || 'We could not read this university’s website.', ...(row.detail ? {detail: row.detail} : {})} as ResearchState;
   }
   return {status: 'none', canResearch: research};
 }
 
 const readRow = (db: D1Database, id: string) =>
-  db.prepare('SELECT status, data, error, domain, updated, started, failed FROM admissions_ai WHERE id = ?').bind(id).first<Row>();
+  db.prepare('SELECT status, data, error, domain, updated, started, failed, retry_after, detail FROM admissions_ai WHERE id = ?').bind(id).first<Row>();
 
 async function withinLimit(db: D1Database, key: string, max: number, expires: number) {
   const row = await db
@@ -135,7 +146,11 @@ export async function POST(req: Request) {
 
   try {
     const headers: Record<string, string> = c.OPENALEX_API_KEY ? {Authorization: `Bearer ${c.OPENALEX_API_KEY}`} : {};
-    const university = toWorldDetail(await fetchJson<Record<string, unknown>>(buildWorldDetailUrl(id), headers));
+    const university = toWorldDetail(
+      await fetchJson<Record<string, unknown>>(buildWorldDetailUrl(id), headers).catch(error => {
+        throw new ResearchError('University data is temporarily unavailable. Please try again later.', String(error), 'service');
+      }),
+    );
     const domain = officialDomain(university.website);
     if (!domain) throw new ResearchError('This university has no official website on record, so there is nothing to read.');
     const model = c.ADMISSIONS_MODEL || c.OPENAI_MODEL || 'gpt-5.5';
@@ -148,8 +163,9 @@ export async function POST(req: Request) {
     const payload = (await response.json().catch(() => ({}))) as {error?: {message?: string}};
     if (!response.ok) {
       throw new ResearchError(
-        response.status === 429 ? 'The AI service is busy right now. Please try again later.' : 'The AI service could not do this right now.',
+        response.status === 429 ? 'The AI service is busy right now. Please try again later.' : 'The AI service could not do this right now. Please try again later.',
         `OpenAI ${response.status}: ${payload.error?.message || ''}`,
+        'service',
       );
     }
     let raw: unknown = null;
@@ -167,13 +183,17 @@ export async function POST(req: Request) {
     await db.prepare('DELETE FROM ai_limits WHERE expires < ?').bind(started).run().catch(() => undefined);
     return reply({status: 'ready', source: 'ai', info, collectedAt: new Date(started * 1000).toISOString(), domain});
   } catch (error) {
-    const message = error instanceof ResearchError ? error.message : 'We could not read this university’s website right now. Please try again later.';
-    console.error('admissions research failed', id, error instanceof ResearchError ? error.detail || error.message : String(error));
+    const known = error instanceof ResearchError;
+    const message = known ? error.message : 'We could not read this university’s website right now. Please try again later.';
+    const detail = cleanDetail(known ? error.detail || error.message : String(error));
+    const failedAt = now();
+    const retryAfter = failedAt + (known && error.kind === 'content' ? FAILED_RETRY_SECONDS : SERVICE_RETRY_SECONDS);
+    console.error('admissions research failed', id, detail);
     await db
-      .prepare(`UPDATE admissions_ai SET status = CASE WHEN data IS NULL THEN 'failed' ELSE status END, error = ?, failed = ?, started = NULL WHERE id = ?`)
-      .bind(message, now(), id)
+      .prepare(`UPDATE admissions_ai SET status = CASE WHEN data IS NULL THEN 'failed' ELSE status END, error = ?, detail = ?, failed = ?, retry_after = ?, started = NULL WHERE id = ?`)
+      .bind(message, detail, failedAt, retryAfter, id)
       .run()
       .catch(() => undefined);
-    return reply({status: 'failed', error: message});
+    return reply({status: 'failed', error: message, detail} as ResearchState);
   }
 }

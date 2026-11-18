@@ -322,8 +322,8 @@ export default function UniversityPage() {
             )}
 
             {university.related.length > 0 && (
-              <section className="wx-related" aria-label="Related campuses and institutions">
-                <h3 className="wx-subtitle">Related campuses and institutions</h3>
+              <section className="wx-related" aria-label="Related campuses and universities">
+                <h3 className="wx-subtitle">Related campuses and universities</h3>
                 <div className="cx-chips">{university.related.map(item => <a className="cx-chip cx-chip-link" key={item.id} href={`/universities/${item.id}`}>{item.name}</a>)}</div>
               </section>
             )}

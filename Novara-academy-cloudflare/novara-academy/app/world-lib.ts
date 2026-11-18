@@ -194,9 +194,11 @@ export function toWorldDetail(row: Row): WorldDetail {
     related: list(row.associated_institutions)
       .map(item => {
         const entry = obj(item);
-        return {id: lastSegment(entry.id), name: text(entry.display_name), relationship: text(entry.relationship)};
+        return {id: lastSegment(entry.id), name: text(entry.display_name), relationship: text(entry.relationship), type: text(entry.type)};
       })
-      .filter(item => parseWorldId(item.id) && item.name)
+      // Campuses and partner universities only: OpenAlex also links hospitals and research institutes.
+      .filter(item => parseWorldId(item.id) && item.name && (!item.type || item.type === 'education'))
+      .map(({type: _type, ...item}) => item)
       .slice(0, 8),
   };
 }
