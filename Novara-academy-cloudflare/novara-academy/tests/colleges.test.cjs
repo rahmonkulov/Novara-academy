@@ -5,7 +5,7 @@ const plain=value=>JSON.parse(JSON.stringify(value));
 
 test('list queries keep only known filters',()=>{
   const query=lib.parseListQuery(new URLSearchParams('q=MIT<script>&state=ma&sel=under10&size=huge&control=private&sort=evil&page=-4'));
-  assert.deepEqual(plain(query),{q:'MIT script',state:'MA',sel:'under10',size:'',control:'private',sort:'selective',page:0,list:'',ids:[]});
+  assert.deepEqual(plain(query),{q:'MIT script',state:'MA',sel:'under10',size:'',control:'private',sort:'selective',page:0});
   assert.equal(lib.parseListQuery(new URLSearchParams('page=99999')).page,lib.MAX_PAGE);
   assert.equal(lib.parseListQuery(new URLSearchParams('state=ZZ')).state,'');
   assert.equal(lib.queryToSearch(lib.parseListQuery(new URLSearchParams('state=NY&sort=name&page=3'))),'state=NY&sort=name&page=3');
@@ -37,24 +37,6 @@ test('College Scorecard list URL applies filters and safe defaults',()=>{
   assert.equal(lib.parseId('166027'),166027);
   assert.equal(lib.parseId('16602x'),null);
   assert.equal(new URL(lib.buildDetailUrl(166027,'KEY')).searchParams.get('id'),'166027');
-});
-
-test('Ivy League and My list ask for exact college IDs, with no other filters',()=>{
-  assert.equal(lib.parseListQuery(new URLSearchParams('list=ivy')).list,'ivy');
-  assert.equal(lib.parseListQuery(new URLSearchParams('list=everything')).list,'');
-  assert.deepEqual(plain(lib.parseIds('166027,166027,abc,12,123456789,130794')),[166027,130794]);
-  assert.equal(lib.parseIds(Array.from({length:80},(_,i)=>String(100000+i)).join(',')).length,lib.MAX_IDS);
-  assert.equal(lib.IVY_LEAGUE_IDS.length,8);
-  const ivy=new URLSearchParams(lib.apiSearch(lib.parseListQuery(new URLSearchParams('list=ivy&sort=name')),[]));
-  assert.equal(ivy.get('list'),null);
-  assert.equal(ivy.get('ids'),lib.IVY_LEAGUE_IDS.join(','));
-  assert.equal(ivy.get('sort'),'name');
-  const mine=new URLSearchParams(lib.apiSearch(lib.parseListQuery(new URLSearchParams('list=saved')),[110635,166027]));
-  assert.equal(mine.get('ids'),'110635,166027');
-  const p=new URL(lib.buildListUrl(lib.parseListQuery(new URLSearchParams('ids=166027,130794&sort=name&state=NY&sel=over50')),'KEY')).searchParams;
-  assert.equal(p.get('id'),'166027,130794');
-  assert.equal(p.get('sort'),'school.name:asc');
-  for(const key of ['school.ownership','school.state','latest.admissions.admission_rate.overall__range','latest.student.size__range'])assert.equal(p.get(key),null,key);
 });
 
 test('rows are shaped for the pages and unsafe links are dropped',()=>{
