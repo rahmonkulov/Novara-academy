@@ -72,7 +72,7 @@ function ChanceBox({info, saved, onScores, name, canResearch, onResearch, busy, 
               <p>{check.text}</p>
             </div>
           ))}
-          {info.chances && <p className="wx-chance-text">{info.chances}</p>}
+          {info.chances && !/^not published\.?$/i.test(info.chances.trim()) && <p className="wx-chance-text">{info.chances}</p>}
           <p className="cx-fine">Meeting a minimum does not guarantee an offer. Grades, activities and your personal statement decide most decisions.</p>
         </>
       ) : (
@@ -86,7 +86,21 @@ function ChanceBox({info, saved, onScores, name, canResearch, onResearch, busy, 
   );
 }
 
-function AdmissionsSection({info, ai, onRefresh}: {info: AdmissionsInfo; ai?: {domain?: string; stale?: boolean}; onRefresh?: () => void}) {
+const NOT_PUBLISHED = /^not published\.?$/i;
+
+function AdmissionsSection({info: raw, ai, onRefresh}: {info: AdmissionsInfo; ai?: {domain?: string; stale?: boolean}; onRefresh?: () => void}) {
+  // The AI only saw some pages, so "Not published" really means it was not on the pages it read.
+  const show = (value: string) => (ai && NOT_PUBLISHED.test(value.trim()) ? 'Not found on the pages we read' : value);
+  const info: AdmissionsInfo = {
+    ...raw,
+    tuition: show(raw.tuition),
+    applicationFee: show(raw.applicationFee),
+    english: show(raw.english),
+    tests: show(raw.tests),
+    rounds: raw.rounds.filter(round => !NOT_PUBLISHED.test(round.trim())),
+    scholarships: raw.scholarships.map(item => ({...item, amount: show(item.amount)})),
+    chances: raw.chances && !NOT_PUBLISHED.test(raw.chances.trim()) ? raw.chances : undefined,
+  };
   return (
     <section className="wx-section" aria-labelledby="admissions-title">
       <div className="wx-section-head">
@@ -112,7 +126,11 @@ function AdmissionsSection({info, ai, onRefresh}: {info: AdmissionsInfo; ai?: {d
       </div>
 
       <h3 className="wx-subtitle">Application rounds</h3>
-      <ul className="wx-list">{info.rounds.map(round => <li key={round}>{round}</li>)}</ul>
+      {info.rounds.length ? (
+        <ul className="wx-list">{info.rounds.map(round => <li key={round}>{round}</li>)}</ul>
+      ) : (
+        <p className="helper">Dates were not on the pages we read. Check the official site below.</p>
+      )}
 
       <h3 className="wx-subtitle">Scholarships and grants</h3>
       {info.scholarships.length ? (

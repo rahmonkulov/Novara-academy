@@ -73,7 +73,10 @@ async function openAiCompatible(provider: ProviderId, url: string, key: string, 
   return body.choices?.[0]?.message?.content || '';
 }
 
-export async function askJson(provider: ProviderId, env: AiEnv, prompt: Prompt, fetcher: typeof fetch = fetch): Promise<{text: string; model: string}> {
+export async function askJson(provider: ProviderId, env: AiEnv, request: Prompt, fetcher: typeof fetch = fetch): Promise<{text: string; model: string}> {
+  // Gemini and OpenAI models may "think" first, and thinking counts toward the token limit, so leave room.
+  // Only tokens actually used are billed.
+  const prompt = provider === 'gemini' || provider === 'openai' ? {...request, maxTokens: Math.max(request.maxTokens, 4096)} : request;
   if (provider === 'gemini') {
     const model = env.GEMINI_MODEL || 'gemini-flash-latest';
     const response = await fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {

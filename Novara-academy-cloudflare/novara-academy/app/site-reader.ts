@@ -18,7 +18,7 @@ const KEYWORDS: [RegExp, number][] = [
 const PENALTIES = /postgrad|graduate school|phd|doctor|master|mba|alumni|news|event|calendar|login|career|staff|faculty-profile|research-/i;
 const SKIP = /\.(pdf|jpe?g|png|gif|svg|webp|zip|docx?|xlsx?|pptx?|mp4|mp3)(\?|$)/i;
 
-export const MAX_PAGES = 9;
+export const MAX_PAGES = 12;
 const PAGE_CHARS = 7000;
 const TOTAL_CHARS = 48000;
 
@@ -99,7 +99,7 @@ export async function readOfficialSite(domain: string, fetcher: typeof fetch = f
   let queue = extractLinks(start.html, start.url, domain);
   // Two rounds: the best links from the home page, then the best links found on those pages.
   for (let round = 0; round < 2 && pages.length < MAX_PAGES; round++) {
-    const batch = queue.filter(link => !seen.has(link.url)).slice(0, round === 0 ? 5 : MAX_PAGES - pages.length);
+    const batch = queue.filter(link => !seen.has(link.url)).slice(0, round === 0 ? 6 : MAX_PAGES - pages.length);
     batch.forEach(link => seen.add(link.url));
     const results = await Promise.all(batch.map(link => getPage(link.url, fetcher)));
     const next: {url: string; score: number}[] = [];

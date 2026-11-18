@@ -82,6 +82,10 @@ export function extractionPrompt(input: {name: string; country: string; domain: 
 
 const clip = (value: unknown, max = 400): string => (typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, max) : '');
 const NOT_PUBLISHED = /^not published\.?$/i;
+const optional = (value: unknown, max: number) => {
+  const text = clip(value, max);
+  return /^(not published|not available|none|null|n\/a|unknown)\.?$/i.test(text) ? '' : text;
+};
 
 export function monthLabel(date: Date): string {
   return date.toLocaleDateString('en-US', {month: 'short', year: 'numeric', timeZone: 'UTC'});
@@ -102,7 +106,7 @@ export function toAdmissionsInfo(raw: unknown, domain: string, collected: Date):
       amount: clip(item.amount, 200) || 'Not published',
       howToApply: item.howToApply === 'automatic' ? 'automatic' : 'separate',
       details: clip(item.details, 400),
-      ...(clip(item.deadline, 160) ? {deadline: clip(item.deadline, 160)} : {}),
+      ...(optional(item.deadline, 160) ? {deadline: optional(item.deadline, 160)} : {}),
       url: item.url as string,
     }));
   const rounds = list(data.rounds).map(round => clip(round, 200)).filter(Boolean).slice(0, 8);
@@ -123,15 +127,15 @@ export function toAdmissionsInfo(raw: unknown, domain: string, collected: Date):
     checked: monthLabel(collected),
     intake: clip(data.intake, 80) || 'Next intake',
     tuition,
-    ...(clip(data.livingCost, 240) ? {livingCost: clip(data.livingCost, 240)} : {}),
+    ...(optional(data.livingCost, 240) ? {livingCost: optional(data.livingCost, 240)} : {}),
     applicationFee: clip(data.applicationFee, 160) || 'Not published',
     rounds: rounds.length ? rounds : ['Not published'],
     english: clip(data.english, 240) || 'Not published',
     ...(ielts !== undefined ? {ieltsMin: ielts} : {}),
-    ...(sat !== undefined ? {satMin: sat, ...(clip(data.satNote, 200) ? {satNote: clip(data.satNote, 200)} : {})} : {}),
+    ...(sat !== undefined ? {satMin: sat, ...(optional(data.satNote, 200) ? {satNote: optional(data.satNote, 200)} : {})} : {}),
     tests: clip(data.tests, 300) || 'Not published',
     scholarships,
-    ...(clip(data.chances, 400) ? {chances: clip(data.chances, 400)} : {}),
+    ...(optional(data.chances, 400) ? {chances: optional(data.chances, 400)} : {}),
     applyUrl: onDomain(data.applyUrl, domain) ? (data.applyUrl as string) : `https://${domain}`,
     sources: sources.length ? sources : scholarshipLinks.slice(0, 3).length ? scholarshipLinks.slice(0, 3) : [{label: domain, url: `https://${domain}`}],
   };
