@@ -88,3 +88,75 @@ a.quiet,a.primary,a.secondary,.cx-footer-link{text-decoration:none}
 @media(max-width:1100px){.cx-layout{padding:45px 30px}.cx-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.cx-detail-grid{grid-template-columns:1fr}.cx-chance-box{position:static}}
 @media(max-width:760px){.cx-layout{padding:32px 22px 45px}.cx-controls{grid-template-columns:1fr;padding:16px}.cx-search{margin-top:0}.cx-filters{grid-template-columns:1fr 1fr}.cx-grid{grid-template-columns:1fr}.cx-card{min-height:0}.cx-results-bar{flex-direction:column;align-items:flex-start}.cx-metrics{grid-template-columns:1fr 1fr;gap:10px}.cx-metric{padding:14px}.cx-metric span{font-size:11px;letter-spacing:.04em}.cx-metric strong{font-size:21px}.cx-heading h1{font-size:34px}}
 @media(max-width:340px){.cx-filters,.cx-metrics{grid-template-columns:1fr}}
+
+/* Categories, saving and the worldwide University Explorer (/universities). */
+.cx-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.cx-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--card);color:var(--foreground);border-radius:999px;padding:7px 14px;font:inherit;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;transition:border-color .2s,background .2s}
+.cx-chip:hover{border-color:#a5b5c6}
+.cx-chip-active{background:var(--foreground);color:var(--background);border-color:var(--foreground)}
+.cx-chip-link{color:var(--muted)}
+.cx-card-actions{display:flex;align-items:center;gap:8px}
+.cx-save{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border);background:var(--card);color:var(--muted);border-radius:8px;padding:10px 14px;font:inherit;font-size:14px;font-weight:500;cursor:pointer}
+.cx-save svg{transition:fill .2s,color .2s}
+.cx-saved{color:#9a7b2f;border-color:#aa905766}
+.cx-saved svg{fill:#c9a24a;color:#c9a24a}
+.cx-save-compact{padding:6px;border-radius:999px;line-height:0}
+.cx-saved-note{grid-column:1/-1;font-size:12px;color:var(--muted);margin:0}
+.cx-saved-note .inline-link{font-size:12px}
+.wx-rank{font-size:12px;font-weight:600;color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:3px 10px;white-space:nowrap}
+.wx-badge{display:inline-flex;width:fit-content;margin-top:10px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#246247;background:#2f7d5a14;border:1px solid #2f7d5a33;border-radius:999px;padding:3px 10px}
+.dark .wx-badge{color:#93d8b7}
+.wx-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
+.wx-banner{display:flex;gap:12px;align-items:flex-start;margin-top:18px;padding:14px 16px;border:1px solid var(--border);border-radius:10px;background:var(--surface);font-size:14px}
+.wx-banner svg{flex-shrink:0;margin-top:3px}
+.wx-other-names{margin:-8px 0 18px;color:var(--muted);font-size:15px}
+.wx-metrics{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:30px}
+.wx-subtitle{display:flex;align-items:center;gap:8px;font-size:17px;margin:26px 0 12px}
+.wx-topic{cursor:default}
+.wx-section{margin-top:34px;padding:26px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.wx-section h2{font-size:24px;line-height:1.3}
+.wx-section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.wx-checked{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);white-space:nowrap}
+.wx-facts{margin-top:20px}
+.wx-facts .cx-metric strong{font-size:17px;letter-spacing:-.01em;line-height:1.5}
+.wx-list{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px;line-height:1.7}
+.wx-scholarships{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.wx-scholarship{padding:18px;border:1px solid var(--border);border-radius:11px;background:var(--card);display:flex;flex-direction:column;gap:8px}
+.wx-scholarship-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.wx-scholarship h4{font-size:16px;line-height:1.4}
+.wx-scholarship p{font-size:14px;line-height:1.7;margin:0}
+.wx-amount{font-weight:600;font-size:15px !important}
+.wx-deadline{color:var(--muted)}
+.wx-apply{font-size:11px;font-weight:600;border-radius:999px;padding:3px 10px;white-space:nowrap;border:1px solid transparent}
+.wx-apply.automatic{background:#2f7d5a14;color:#246247;border-color:#2f7d5a33}
+.wx-apply.separate{background:#aa90571f;color:#7a6431;border-color:#aa905755}
+.dark .wx-apply.automatic{color:#93d8b7}.dark .wx-apply.separate{color:#e6cf98}
+.wx-apply-row{margin-top:24px}
+.wx-apply-row .primary{display:inline-flex;align-items:center;gap:10px}
+.wx-sources{margin-top:18px;font-size:12px;line-height:1.8;color:var(--muted)}
+.wx-sources .inline-link{font-size:12px}
+.wx-pending p{margin-top:10px;font-size:14px;line-height:1.8;color:var(--muted)}
+.wx-related .cx-chip-link{color:var(--foreground)}
+@media(max-width:1100px){.wx-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.wx-scholarships{grid-template-columns:1fr}}
+@media(max-width:760px){.cx-chips{flex-wrap:nowrap;overflow-x:auto;padding-bottom:6px;margin-right:-22px;padding-right:22px}.cx-chip{flex-shrink:0}.wx-filters{grid-template-columns:1fr 1fr}.wx-section{padding:18px}.top-right .cx-nav svg{display:none}}
+.welcome-card{margin-top:30px;padding:22px 24px;border:1px solid var(--border);border-radius:14px;background:var(--surface);max-width:620px}
+.welcome-card .eyebrow{margin:0 0 8px}
+.welcome-saved{display:flex;gap:8px;align-items:flex-start;font-size:14px;line-height:1.7;margin:0}
+.welcome-saved svg{flex-shrink:0;margin-top:4px;color:#2f7d5a}
+.welcome-card .hero-actions{margin-top:18px;gap:12px;flex-wrap:wrap}
+.welcome-card .secondary.large{gap:10px}
+.welcome-hint{margin:14px 0 0;font-size:13px;color:var(--muted);line-height:1.7}
+.cx-other-list{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:22px 0 0;font-size:14px}
+.wx-score-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.wx-score-row .cx-sat{min-width:0}
+.wx-chance-text{font-size:14px;line-height:1.75;margin:0}
+.cx-detail-grid .cx-saved-note{margin-top:16px}
+@media(max-width:760px){.welcome-card{padding:18px}.welcome-card .hero-actions>*{width:100%}.wx-facts{grid-template-columns:1fr}.wx-topics .cx-chips{flex-wrap:wrap;margin-right:0;padding-right:0}}
+.wx-ai-label{color:#5b4fa3}
+.dark .wx-ai-label{color:#c4b8ff}
+.wx-ai-note{margin:14px 0 0;padding:12px 14px;border-radius:9px;background:#5b4fa30f;border:1px solid #5b4fa333;font-size:13px;line-height:1.7}
+.wx-research p{margin-top:10px;font-size:14px;line-height:1.8}
+.wx-research-button{display:inline-flex;align-items:center;gap:10px;margin-top:18px}
+.wx-research-busy{display:flex;align-items:center;gap:12px;font-weight:500}
+.wx-spinner{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--foreground);animation:wx-spin .9s linear infinite;flex-shrink:0}
+@keyframes wx-spin{to{transform:rotate(360deg)}}

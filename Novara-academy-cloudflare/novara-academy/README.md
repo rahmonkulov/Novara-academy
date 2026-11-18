@@ -15,7 +15,11 @@ The product has two explicitly different result modes:
 - **Live AI assessment:** the server sends the consented academic profile to OpenAI and requests research on official university domains. It validates the returned structure and source references. Categories express qualitative judgments, not admission probabilities.
 - **Demo matching:** a deterministic preference score and illustrative cost data let reviewers inspect the interface without paying for an API. Demo results are labeled and are never presented as a successful AI response.
 
-The **College Explorer** (`/colleges`) searches US four-year colleges with live U.S. Department of Education College Scorecard data: acceptance rate, SAT and ACT middle 50%, test policy, size, international share, cost, graduation rate and earnings. Students filter by state, acceptance rate, size and public/private, and can enter an SAT score to see a conservative reach / target / likely guide. Each college has its own page at `/colleges/<id>`. The SAT stays in the browser tab (sessionStorage) and is never sent to the server.
+The **College Explorer** (`/colleges`) searches US four-year colleges with live U.S. Department of Education College Scorecard data: acceptance rate, SAT and ACT middle 50%, test policy, size, international share, cost, graduation rate and earnings. Students filter by state, acceptance rate, size and public/private, and can enter an SAT score to see a conservative reach / target / likely guide. Each college has its own page at `/colleges/<id>`. Quick categories: All US colleges, Top USA (admission rate under 10%), Ivy League and My list.
+
+The **University Explorer** (`/universities`) covers more than 30,000 universities in 200 countries with open OpenAlex data. Students search in any language, filter by country or region, and use quick categories (Top Asia, Top Europe, Middle East, Hong Kong, China, South Korea, Japan, Singapore, United Kingdom, Turkey, Uzbekistan). "Top" means most research citations, which measures research strength, not teaching quality or selectivity. Each university page (`/universities/<OpenAlex id>`) shows its rank in its country and worldwide by citations, research strengths, related campuses, a "Your chances here" box and, where checked by hand, an **Admissions and money** section: tuition, living costs, application fee, rounds, English and test requirements, and every scholarship marked as *considered automatically* or *separate application*, with official sources and the month it was checked (`app/admissions-data.ts`).
+
+**Nothing is typed twice.** The questionnaire profile (grades, SAT, IELTS, activities, essay, AI report) is saved in the browser's localStorage from the first answer, with no sign-in. Returning students see "Welcome back" on the home page with their saved profile and one button to their results or the step where they stopped. Every explorer and university page reads the same profile: SAT and IELTS typed anywhere update it everywhere, and starred universities (US and worldwide) form one My list. "Delete" on any page opens the home page's delete dialog, which removes everything. Data stays on the device and is never sent to the server; a different device or browser starts empty.
 
 Website: https://novara-academy.abduraimrahmonkulov0.workers.dev
 Repository: https://github.com/rahmonkulov/Novara-academy
@@ -29,9 +33,9 @@ The repository must be accessible to judges. The owner must verify that access b
 - OpenAI Responses API with the `web_search` tool. Default model: `gpt-5.5`, overridable with `OPENAI_MODEL` when the account has access to a compatible model.
 - Zod validates profiles and AI reports.
 - Tailwind CSS, Radix/shadcn components and Lucide icons provide general UI primitives. Inter is bundled with its license.
-- Browser localStorage saves profiles and reports only after the user accepts local saving.
+- Browser localStorage keeps the profile, AI report and saved lists on the student's device (`app/profile-store.ts`). Nothing is stored on the server.
 - Optional Resend email delivery and Cloudflare D1 store temporary verification challenges and request limits.
-- College Scorecard API (api.data.gov) behind `app/api/colleges/route.ts`. Responses are cached in Worker memory and, where available, Cloudflare's edge cache. `app/colleges-lib.ts` holds the shared filter rules, data shaping and the SAT guide; `app/colleges/` holds the pages.
+- College Scorecard API (api.data.gov) behind `app/api/colleges/route.ts`, and OpenAlex behind `app/api/universities/route.ts`. Both use `app/server-cache.ts`: Worker memory, then Cloudflare's edge cache; one retry when the data service times out or fails; and, if it is still down, a copy up to a week old instead of an error. Pages retry once more on their own and offer "Try again". `app/colleges-lib.ts` and `app/world-lib.ts` hold the shared filter rules and data shaping.
 - The product name, tagline and logo are set once in `app/brand.ts`. To rename the site, edit that file and replace the logo in `public/`.
 
 `app/page.tsx` manages questionnaire, profile editing and demo views. `app/data.ts` holds the illustrative university catalogue, validation and demo ranking. `app/profile-controls.tsx` contains searchable selectors. `app/api/match/route.ts` handles AI research. `app/ai-results.tsx` displays sourced results. `app/api/email/route.ts` handles optional verification.
@@ -73,6 +77,22 @@ The College Explorer needs a free College Scorecard key.
 2. In Cloudflare, open Workers & Pages → `novara-academy` → Settings → Variables and Secrets, and add a **Secret** named `SCORECARD_API_KEY`.
 3. Never commit the key. Without it the Worker falls back to `DEMO_KEY`, which allows only a handful of requests per hour, so the explorer will often show "busy".
 
+## Admissions and scholarships for every university
+
+Hand-checked entries live in `app/admissions-data.ts` (HKUST first). For any other university, its page offers **Find admissions & scholarships**: `app/api/admissions/route.ts` asks OpenAI (Responses API, web search limited to that university's own domain from OpenAlex) for tuition, fees, rounds, English and test requirements, and every scholarship marked automatic or separate application. `app/admissions-ai.ts` drops every link that is not on the official domain, rejects empty answers, and labels the result "Collected by AI" with the date. Results are saved in the `DATA_DB` D1 database, so each university is researched once for everyone and refreshed after 120 days.
+
+- Needs the existing `OPENAI_API_KEY` secret. `ADMISSIONS_MODEL` (or `OPENAI_MODEL`) picks the model; the default is `gpt-5.5`.
+- Cost limits: `ADMISSIONS_DAILY_LIMIT` new universities a day in total (15 in `wrangler.json`) and 3 per visitor a day. Failed searches are not retried for six hours. Set `ADMISSIONS_AI` to `off` in `wrangler.json` to stop new research; saved results still show.
+- `DATA_DB` has no ID in `wrangler.json`: Wrangler creates the `novara-data` database on the first deploy. Tables are created on first use.
+
+## University data key (OpenAlex)
+
+The University Explorer needs a free OpenAlex key. Without one, every Worker shares OpenAlex's tiny keyless daily budget, so lists and ranks fail most of the day.
+
+1. Create a free account at https://openalex.org and copy the key from https://openalex.org/settings/api.
+2. In Cloudflare, open Workers & Pages → `novara-academy` → Settings → Variables and Secrets, and add a **Secret** named `OPENALEX_API_KEY`.
+3. Never commit the key. The free key includes $1 of usage per day (roughly a thousand list searches). Looking up one university by ID is free, and the Worker caches every answer, so this covers early traffic.
+
 ## Optional real email verification
 
 Email is **not required** to obtain an assessment. When the service is unavailable, the UI hides the send-code controls and explains that users can continue. No fake code or success state is used.
@@ -107,6 +127,7 @@ Verification confirms email ownership for the current UI session. It does not cr
 ## Validation and known limits
 
 - The College Explorer update passed the unit tests (`pnpm run test`) and a syntax check, but it was written without installed dependencies, so its first full TypeScript check and production build run on Cloudflare. Check the build log after merging.
+- University Explorer limits: OpenAlex covers research institutions, so a few teaching-only colleges may be missing, and ranks by citations favour large research universities. Admissions and scholarship details exist only for universities checked by hand; other pages say so instead of guessing. Saved data lives in one browser on one device.
 - College Explorer limits: US four-year colleges only. Colleges with fewer than 300 undergraduates are hidden unless the student searches by name. Scorecard figures can lag one to two years. The SAT middle 50% adds the two section ranges. The reach / target / likely guide uses only the SAT and the admission rate, and any college admitting under 15% is always a reach.
 - Offline email integration tests execute real SQLite statements with a mocked delivery provider. They check verification, reuse, expired codes, attempt limits, resend limits, origin rejection and missing configuration.
 - Profile tests verify country selection, gap year and structured qualification validation.
