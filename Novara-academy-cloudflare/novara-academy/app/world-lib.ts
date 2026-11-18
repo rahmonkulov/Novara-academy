@@ -5,7 +5,7 @@ import {safeUrl} from './colleges-lib';
 
 export const OPENALEX_URL = 'https://api.openalex.org/institutions';
 // Bump when filters or the response shape change, so cached answers from older versions are not reused.
-export const WORLD_DATA_VERSION = 2;
+export const WORLD_DATA_VERSION = 3;
 export const WORLD_PER_PAGE = 24;
 export const WORLD_MAX_PAGE = 199;
 export const MAX_SAVED_UNIVERSITIES = 60;

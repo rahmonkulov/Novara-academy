@@ -120,3 +120,17 @@ test('without an AI key the button is hidden and research is refused',async()=>{
   const off=harness({env:{ADMISSIONS_AI:'off'}});
   assert.deepEqual(await off.get('I889458895'),{status:'none',canResearch:false});
 });
+
+test('a wrong AI key shows only "OpenAI 401" publicly and can be retried soon',async()=>{
+  const h=harness({openai:()=>json({error:{message:'Incorrect API key provided: sk-proj-****abcd.'}},401)});
+  const first=await h.post('I3001');
+  assert.equal(first.body.status,'failed');
+  assert.equal(first.body.detail,'OpenAI 401');
+  assert.doesNotMatch(JSON.stringify(first.body),/Incorrect|sk-proj/);
+  const later=await h.get('I3001');
+  assert.equal(later.detail,'OpenAI 401');
+  const row=h.sql.prepare('SELECT detail, retry_after, failed FROM admissions_ai WHERE id = ?').get('I3001');
+  assert.match(row.detail,/Incorrect API key/);
+  assert.doesNotMatch(row.detail,/sk-proj-\*/);
+  assert.equal(row.retry_after-row.failed,600);
+});

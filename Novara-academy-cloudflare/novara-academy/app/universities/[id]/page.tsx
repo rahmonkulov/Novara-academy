@@ -47,7 +47,7 @@ function scoreChecks(info: AdmissionsInfo | undefined, saved: Saved): Check[] {
   return checks;
 }
 
-function ChanceBox({info, saved, onScores, name, canResearch, onResearch, busy}: {info: AdmissionsInfo | undefined; saved: Saved; onScores: (patch: {sat?: string; ielts?: string}) => void; name: string; canResearch: boolean; onResearch: () => void; busy: boolean}) {
+function ChanceBox({info, saved, onScores, name, canResearch, onResearch, busy, loading}: {info: AdmissionsInfo | undefined; saved: Saved; onScores: (patch: {sat?: string; ielts?: string}) => void; name: string; canResearch: boolean; onResearch: () => void; busy: boolean; loading: boolean}) {
   const checks = scoreChecks(info, saved);
   return (
     <aside className="cx-chance-box" aria-labelledby="chance-title">
@@ -77,8 +77,8 @@ function ChanceBox({info, saved, onScores, name, canResearch, onResearch, busy}:
         </>
       ) : (
         <div className="cx-chance-result">
-          <span className="cx-chance unknown">Not checked yet</span>
-          <p>{busy ? `Reading ${name}’s website. Your scores are compared here as soon as its requirements are in.` : canResearch ? `Let our AI read ${name}’s official website, and your saved scores are compared with its requirements right here.` : `We have not verified ${name}’s entry requirements yet, so we will not guess. Your scores stay saved and will be compared here as soon as we add them.`}</p>
+          <span className="cx-chance unknown">{loading ? 'Loading' : 'Not checked yet'}</span>
+          <p>{loading ? 'Looking for saved admissions details…' : busy ? `Reading ${name}’s website. Your scores are compared here as soon as its requirements are in.` : canResearch ? `Let our AI read ${name}’s official website, and your saved scores are compared with its requirements right here.` : `We have not verified ${name}’s entry requirements yet, so we will not guess. Your scores stay saved and will be compared here as soon as we add them.`}</p>
           {canResearch && !busy && <button type="button" className="primary wx-research-button" onClick={onResearch}><Sparkles size={18} /> Find admissions &amp; scholarships</button>}
         </div>
       )}
@@ -152,6 +152,14 @@ type Research = (ResearchState & {stale?: boolean}) | null;
 
 function ResearchCard({research, name, website, onStart, busy}: {research: Research; name: string; website: string | null; onStart: () => void; busy: boolean}) {
   const domain = website ? website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/.*$/, '') : 'its official website';
+  if (research === null) {
+    return (
+      <section className="wx-section wx-pending" aria-busy="true">
+        <h2>Admissions and money for international students</h2>
+        <p>Looking for saved admissions details…</p>
+      </section>
+    );
+  }
   if (busy || research?.status === 'running') {
     return (
       <section className="wx-section wx-research" aria-live="polite">
@@ -312,7 +320,7 @@ export default function UniversityPage() {
                   </section>
                 )}
               </div>
-              <ChanceBox info={info} saved={saved} onScores={updateSaved} name={university.name} canResearch={research?.status === 'none' && research.canResearch && Boolean(university.website)} onResearch={startResearch} busy={busy} />
+              <ChanceBox info={info} saved={saved} onScores={updateSaved} name={university.name} canResearch={research?.status === 'none' && research.canResearch && Boolean(university.website)} onResearch={startResearch} busy={busy} loading={research === null} />
             </section>
 
             {research?.status === 'ready' && !busy ? (

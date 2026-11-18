@@ -40,7 +40,9 @@ class ResearchError extends Error {
   }
 }
 // Error text from other services, kept for debugging without anything that looks like a key.
-const cleanDetail = (text: string) => text.replace(/\b(sk|key|token)[-_a-z0-9]{8,}/gi, '[hidden]').slice(0, 300);
+const cleanDetail = (text: string) => text.replace(/\b(sk|key|token)[-_a-z0-9*]{8,}/gi, '[hidden]').slice(0, 300);
+// "OpenAI 401: Incorrect API key…" → "OpenAI 401". Enough to tell a key problem from a busy service.
+const publicDetail = (text: string) => (text.match(/^(OpenAI|OpenAlex) \d{3}/)?.[0] ?? '');
 
 let tables: Promise<unknown> | null = null;
 function ensureTables(db: D1Database) {
@@ -75,7 +77,7 @@ function stateOf(row: Row | null, at: number, research: boolean): ResearchState 
     };
   }
   if (row?.status === 'failed' && row.retry_after && at < row.retry_after) {
-    return {status: 'failed', error: row.error || 'We could not read this university’s website.', ...(row.detail ? {detail: row.detail} : {})} as ResearchState;
+    return {status: 'failed', error: row.error || 'We could not read this university’s website.', ...(row.detail ? {detail: publicDetail(row.detail)} : {})} as ResearchState;
   }
   return {status: 'none', canResearch: research};
 }
@@ -194,6 +196,6 @@ export async function POST(req: Request) {
       .bind(message, detail, failedAt, retryAfter, id)
       .run()
       .catch(() => undefined);
-    return reply({status: 'failed', error: message, detail} as ResearchState);
+    return reply({status: 'failed', error: message, ...(publicDetail(detail) ? {detail: publicDetail(detail)} : {})} as ResearchState);
   }
 }
