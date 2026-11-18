@@ -78,20 +78,27 @@ export async function askJson(provider: ProviderId, env: AiEnv, request: Prompt,
   // Only tokens actually used are billed.
   const prompt = provider === 'gemini' || provider === 'openai' ? {...request, maxTokens: Math.max(request.maxTokens, 4096)} : request;
   if (provider === 'gemini') {
-    const model = env.GEMINI_MODEL || 'gemini-flash-latest';
-    const response = await fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-      method: 'POST',
-      headers: {'x-goog-api-key': env.GEMINI_API_KEY || '', 'Content-Type': 'application/json'},
-      signal: AbortSignal.timeout(90000),
-      body: JSON.stringify({
-        systemInstruction: {parts: [{text: prompt.system}]},
-        contents: [{role: 'user', parts: [{text: prompt.user}]}],
-        generationConfig: {responseMimeType: 'application/json', maxOutputTokens: prompt.maxTokens, temperature: 0.2},
-      }),
-    });
-    const body = (await response.json().catch(() => ({}))) as {error?: {message?: string}; candidates?: {content?: {parts?: {text?: string}[]}}[]};
-    if (!response.ok) throw new ProviderError('gemini', response.status, body.error?.message || '');
-    return {text: (body.candidates?.[0]?.content?.parts || []).map(part => part.text || '').join(''), model};
+    // Google's free models are sometimes "experiencing high demand" (503) or rate-limited (429):
+    // then the lighter Flash-Lite model gets one try.
+    const models = env.GEMINI_MODEL ? [env.GEMINI_MODEL] : ['gemini-flash-latest', 'gemini-flash-lite-latest'];
+    let lastError: ProviderError | null = null;
+    for (const model of models) {
+      const response = await fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        method: 'POST',
+        headers: {'x-goog-api-key': env.GEMINI_API_KEY || '', 'Content-Type': 'application/json'},
+        signal: AbortSignal.timeout(90000),
+        body: JSON.stringify({
+          systemInstruction: {parts: [{text: prompt.system}]},
+          contents: [{role: 'user', parts: [{text: prompt.user}]}],
+          generationConfig: {responseMimeType: 'application/json', maxOutputTokens: prompt.maxTokens, temperature: 0.2},
+        }),
+      });
+      const body = (await response.json().catch(() => ({}))) as {error?: {message?: string}; candidates?: {content?: {parts?: {text?: string}[]}}[]};
+      if (response.ok) return {text: (body.candidates?.[0]?.content?.parts || []).map(part => part.text || '').join(''), model};
+      lastError = new ProviderError('gemini', response.status, body.error?.message || '');
+      if (response.status !== 503 && response.status !== 429) break;
+    }
+    throw lastError ?? new ProviderError('gemini', 0, 'no answer');
   }
   if (provider === 'workers-ai') {
     if (!env.AI) throw new ProviderError('workers-ai', 0, 'not connected');

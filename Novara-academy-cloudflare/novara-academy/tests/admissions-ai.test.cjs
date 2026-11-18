@@ -189,3 +189,14 @@ test('the key check reports each AI without showing keys, and is reused for five
   await route.GET();
   assert.equal(calls,2);
 });
+
+test('when Gemini Flash is overloaded, Flash-Lite gets one try',async()=>{
+  const asked=[];
+  const fetcher=async url=>{asked.push(String(url));return String(url).includes('flash-latest:')?json({error:{message:'high demand'}},503):json({candidates:[{content:{parts:[{text:'{"ok":true}'}]}}]})};
+  const providers=load('app/ai-providers.ts',{},{fetch:fetcher});
+  const answer=await providers.askJson('gemini',{GEMINI_API_KEY:'g'},{system:'s',user:'u',maxTokens:10});
+  assert.equal(answer.model,'gemini-flash-lite-latest');
+  assert.equal(asked.length,2);
+  const bad=load('app/ai-providers.ts',{},{fetch:async()=>json({error:{message:'API key not valid'}},400)});
+  await assert.rejects(bad.askJson('gemini',{GEMINI_API_KEY:'g'},{system:'s',user:'u',maxTokens:10}),error=>error.status===400);
+});
