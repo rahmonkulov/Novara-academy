@@ -84,12 +84,12 @@ export const respond = (body: string, status = 200) =>
 export const fail = (error: string, status: number) => respond(JSON.stringify({error}), status);
 
 // One retry after a short pause for timeouts, dropped connections, 5xx and 429 answers.
-export async function fetchJson<T>(url: string): Promise<T> {
+export async function fetchJson<T>(url: string, headers: Record<string, string> = {}): Promise<T> {
   let lastError: unknown = new UpstreamError(0);
   for (let attempt = 0; attempt < 2; attempt++) {
     if (attempt) await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
     try {
-      const response = await fetch(url, {headers: {Accept: 'application/json'}, signal: AbortSignal.timeout(ATTEMPT_TIMEOUT_MS)});
+      const response = await fetch(url, {headers: {Accept: 'application/json', ...headers}, signal: AbortSignal.timeout(ATTEMPT_TIMEOUT_MS)});
       if (response.ok) return (await response.json()) as T;
       lastError = new UpstreamError(response.status);
       // Other 4xx answers (not found, bad request) will not change on a retry.

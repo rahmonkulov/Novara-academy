@@ -77,6 +77,14 @@ The College Explorer needs a free College Scorecard key.
 2. In Cloudflare, open Workers & Pages → `novara-academy` → Settings → Variables and Secrets, and add a **Secret** named `SCORECARD_API_KEY`.
 3. Never commit the key. Without it the Worker falls back to `DEMO_KEY`, which allows only a handful of requests per hour, so the explorer will often show "busy".
 
+## University data key (OpenAlex)
+
+The University Explorer needs a free OpenAlex key. Without one, every Worker shares OpenAlex's tiny keyless daily budget, so lists and ranks fail most of the day.
+
+1. Create a free account at https://openalex.org and copy the key from https://openalex.org/settings/api.
+2. In Cloudflare, open Workers & Pages → `novara-academy` → Settings → Variables and Secrets, and add a **Secret** named `OPENALEX_API_KEY`.
+3. Never commit the key. The free key includes $1 of usage per day (roughly a thousand list searches). Looking up one university by ID is free, and the Worker caches every answer, so this covers early traffic.
+
 ## Optional real email verification
 
 Email is **not required** to obtain an assessment. When the service is unavailable, the UI hides the send-code controls and explains that users can continue. No fake code or success state is used.

@@ -1,7 +1,8 @@
 // University Explorer helpers (OpenAlex): query parsing, request URLs and data shaping.
 const {test}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const vm=require('node:vm');const ts=require('typescript');
-function load(file,deps={}){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,URL,URLSearchParams,require:name=>{const hit=Object.keys(deps).find(key=>name.endsWith(key));if(!hit)throw new Error('Unexpected import '+name);return deps[hit]}});return exports}
-const lib=load('app/world-lib.ts',{'/colleges-lib':load('app/colleges-lib.ts')});
+function load(file,deps={},globals={}){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,URL,URLSearchParams,Request,Response,AbortSignal,setTimeout,...globals,require:name=>{const hit=Object.keys(deps).find(key=>name.endsWith(key));if(!hit)throw new Error('Unexpected import '+name);return deps[hit]}});return exports}
+const colleges=load('app/colleges-lib.ts');
+const lib=load('app/world-lib.ts',{'/colleges-lib':colleges});
 const plain=value=>JSON.parse(JSON.stringify(value));
 
 test('world queries keep only known values, in any script',()=>{
@@ -78,4 +79,30 @@ test('countries come back sorted by name, and labels format compactly',()=>{
   assert.equal(lib.formatCompact(null),'—');
   assert.equal(lib.formatRank(1234),'#1,234');
   assert.equal(lib.formatRank(null),'—');
+});
+
+test('university pages send the OpenAlex key, and ranks that failed are fetched again next time',async()=>{
+  const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json'}});
+  const calls=[];let ranksDown=true;
+  const fetcher=async(url,init)=>{
+    calls.push({url:String(url),auth:init.headers.Authorization});
+    const u=new URL(url);const filter=u.searchParams.get('filter')||'';
+    if(u.pathname.endsWith('/I200769079'))return json({id:'https://openalex.org/I200769079',display_name:'HKUST',geo:{city:'Hong Kong',country:'Hong Kong',country_code:'HK'},cited_by_count:1000});
+    if(filter.includes('cited_by_count')){if(ranksDown)return json({error:'Rate limit exceeded'},429);return json({meta:{count:filter.includes('country_code')?3:51}})}
+    return json({meta:{count:1},results:[{id:'https://openalex.org/I200769079',display_name:'HKUST'}]});
+  };
+  const cache=load('app/server-cache.ts',{},{fetch:fetcher,setTimeout:fn=>setTimeout(fn,0)});
+  const route=load('app/api/universities/route.ts',{'cloudflare:workers':{env:{OPENALEX_API_KEY:'test-key'}},'/world-lib':lib,'/server-cache':cache});
+  let body=await (await route.GET(new Request('https://novara.test/api/universities?id=I200769079'))).json();
+  assert.equal(body.university.name,'HKUST');
+  assert.deepEqual(body.ranks,{country:null,world:null});
+  ranksDown=false;
+  body=await (await route.GET(new Request('https://novara.test/api/universities?id=I200769079'))).json();
+  assert.deepEqual(body.ranks,{country:4,world:52});
+  assert.equal(calls.filter(call=>new URL(call.url).pathname.endsWith('/I200769079')).length,1);
+  const list=await (await route.GET(new Request('https://novara.test/api/universities?country=HK'))).json();
+  assert.equal(list.total,1);
+  assert.equal(list.results[0].id,'I200769079');
+  assert.ok(calls.every(call=>call.auth==='Bearer test-key'));
+  assert.ok(calls.every(call=>!call.url.includes('test-key')));
 });
