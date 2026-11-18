@@ -15,6 +15,8 @@ The product has two explicitly different result modes:
 - **Live AI assessment:** the server sends the consented academic profile to OpenAI and requests research on official university domains. It validates the returned structure and source references. Categories express qualitative judgments, not admission probabilities.
 - **Demo matching:** a deterministic preference score and illustrative cost data let reviewers inspect the interface without paying for an API. Demo results are labeled and are never presented as a successful AI response.
 
+The **College Explorer** (`/colleges`) searches US four-year colleges with live U.S. Department of Education College Scorecard data: acceptance rate, SAT and ACT middle 50%, test policy, size, international share, cost, graduation rate and earnings. Students filter by state, acceptance rate, size and public/private, and can enter an SAT score to see a conservative reach / target / likely guide. Each college has its own page at `/colleges/<id>`. The SAT stays in the browser tab (sessionStorage) and is never sent to the server.
+
 Website: https://novara-academy.abduraimrahmonkulov0.workers.dev
 Repository: https://github.com/rahmonkulov/Novara-academy
 
@@ -29,6 +31,8 @@ The repository must be accessible to judges. The owner must verify that access b
 - Tailwind CSS, Radix/shadcn components and Lucide icons provide general UI primitives. Inter is bundled with its license.
 - Browser localStorage saves profiles and reports only after the user accepts local saving.
 - Optional Resend email delivery and Cloudflare D1 store temporary verification challenges and request limits.
+- College Scorecard API (api.data.gov) behind `app/api/colleges/route.ts`. Responses are cached in Worker memory and, where available, Cloudflare's edge cache. `app/colleges-lib.ts` holds the shared filter rules, data shaping and the SAT guide; `app/colleges/` holds the pages.
+- The product name, tagline and logo are set once in `app/brand.ts`. To rename the site, edit that file and replace the logo in `public/`.
 
 `app/page.tsx` manages questionnaire, profile editing and demo views. `app/data.ts` holds the illustrative university catalogue, validation and demo ranking. `app/profile-controls.tsx` contains searchable selectors. `app/api/match/route.ts` handles AI research. `app/ai-results.tsx` displays sourced results. `app/api/email/route.ts` handles optional verification.
 
@@ -59,9 +63,15 @@ This repository stores the application inside `Novara-academy-cloudflare/novara-
 | Production branch | main |
 | Build variable | NODE_VERSION=22.16.0 |
 
-This update sets `LIVE_AI_ENABLED` to `true` in wrangler.json so a Git deployment will keep AI enabled. AI calls still require a valid runtime `OPENAI_API_KEY` secret, API billing, and model access. Retain the existing secret in Cloudflare. Do not paste it into GitHub. To pause AI, set the flag to `false` in both the dashboard and source configuration.
+Live AI is paused: `LIVE_AI_ENABLED` is `false` in wrangler.json, and Git deployments reapply that value. The public AI endpoint has no per-user authentication or spending limit, so keep it off until the assessment is rebuilt with access codes and a daily cap. Visitors still get demo matching and the College Explorer. Keep the existing `OPENAI_API_KEY` secret in Cloudflare; never paste it into GitHub.
 
-The public AI endpoint does not yet have per-user authentication or a durable AI spending limit. Keep initial testing small and monitor usage. Email verification is optional and is not an authentication gate for AI.
+## College data key
+
+The College Explorer needs a free College Scorecard key.
+
+1. Sign up at https://api.data.gov/signup/ and copy the key from the confirmation email.
+2. In Cloudflare, open Workers & Pages → `novara-academy` → Settings → Variables and Secrets, and add a **Secret** named `SCORECARD_API_KEY`.
+3. Never commit the key. Without it the Worker falls back to `DEMO_KEY`, which allows only a handful of requests per hour, so the explorer will often show "busy".
 
 ## Optional real email verification
 
@@ -96,7 +106,8 @@ Verification confirms email ownership for the current UI session. It does not cr
 
 ## Validation and known limits
 
-- TypeScript and production build pass for this update.
+- The College Explorer update passed the unit tests (`pnpm run test`) and a syntax check, but it was written without installed dependencies, so its first full TypeScript check and production build run on Cloudflare. Check the build log after merging.
+- College Explorer limits: US four-year colleges only. Colleges with fewer than 300 undergraduates are hidden unless the student searches by name. Scorecard figures can lag one to two years. The SAT middle 50% adds the two section ranges. The reach / target / likely guide uses only the SAT and the admission rate, and any college admitting under 15% is always a reach.
 - Offline email integration tests execute real SQLite statements with a mocked delivery provider. They check verification, reuse, expired codes, attempt limits, resend limits, origin rejection and missing configuration.
 - Profile tests verify country selection, gap year and structured qualification validation.
 - A live OpenAI assessment and real email delivery have **not** been verified in this workspace. The owner must test the deployed account before claiming either works end to end.

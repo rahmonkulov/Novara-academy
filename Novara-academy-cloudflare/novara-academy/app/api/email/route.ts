@@ -1,4 +1,5 @@
 import {env} from 'cloudflare:workers';
+import {BRAND} from '../../brand';
 type Config={RESEND_API_KEY?:string;EMAIL_FROM?:string;EMAIL_DB?:D1Database};
 const config=()=>env as unknown as Config;
 const json=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
@@ -23,7 +24,7 @@ export async function POST(req:Request){
  if(!await limit(db,`minute:${emailHash}:${minute}`,1,now+120)||!await limit(db,`email:${emailHash}:${hour}`,5,now+7200)||!await limit(db,`ip:${ipHash}:${hour}`,20,now+7200))return json({error:'Too many code requests. Wait a minute; hourly limits may also apply.'},429);
  const bytes=crypto.getRandomValues(new Uint32Array(1));const code=String(bytes[0]%1000000).padStart(6,'0'),id=crypto.randomUUID();const codeHash=await digest(id+':'+code,secret);
  await db.prepare('INSERT INTO email_challenges (id,email_hash,code_hash,expires,attempts) VALUES (?,?,?,?,0) ON CONFLICT(email_hash) DO UPDATE SET id=excluded.id,code_hash=excluded.code_hash,expires=excluded.expires,attempts=0').bind(id,emailHash,codeHash,now+600).run();
- const result=await fetch('https://api.resend.com/emails',{method:'POST',signal:AbortSignal.timeout(15000),headers:{Authorization:`Bearer ${secret}`,'Content-Type':'application/json'},body:JSON.stringify({from:c.EMAIL_FROM,to:[email],subject:'Your Novara Academy verification code',text:`Your Novara Academy code is ${code}. It expires in 10 minutes. If you did not request it, ignore this email. Never share this code.`})});
+ const result=await fetch('https://api.resend.com/emails',{method:'POST',signal:AbortSignal.timeout(15000),headers:{Authorization:`Bearer ${secret}`,'Content-Type':'application/json'},body:JSON.stringify({from:c.EMAIL_FROM,to:[email],subject:`Your ${BRAND.name} verification code`,text:`Your ${BRAND.name} code is ${code}. It expires in 10 minutes. If you did not request it, ignore this email. Never share this code.`})});
  if(!result.ok){await db.prepare('DELETE FROM email_challenges WHERE id=?').bind(id).run();return json({error:'The email could not be sent. Please retry later or continue without email.'},502)}
  await db.batch([db.prepare('DELETE FROM email_challenges WHERE expires<?').bind(now),db.prepare('DELETE FROM email_limits WHERE expires<?').bind(now)]);
  return json({challengeId:id,message:'Code sent. Check your inbox and spam folder.'});
