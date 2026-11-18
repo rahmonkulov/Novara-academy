@@ -6,7 +6,7 @@
     "nodejs_compat"
   ],
   "vars": {
-    "LIVE_AI_ENABLED": "false",
+    "LIVE_AI_ENABLED": "true",
     "ADMISSIONS_AI": "on",
     "ADMISSIONS_DAILY_LIMIT": "15"
   },

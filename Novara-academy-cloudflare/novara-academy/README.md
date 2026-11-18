@@ -12,7 +12,7 @@ The website collects a student profile, explains university options, compares at
 
 The product has two explicitly different result modes:
 
-- **Live AI assessment:** the server sends the consented academic profile to OpenAI and requests research on official university domains. It validates the returned structure and source references. Categories express qualitative judgments, not admission probabilities.
+- **Live AI assessment:** the server sends the consented academic profile (without name, school or email) to Google Gemini, or to Cloudflare Workers AI if Gemini is busy (`app/api/match/route.ts`). The AI does not browse; `app/assessment.ts` keeps only catalogue universities and valid categories, and points every requirement to that university's official page. Limits: 5 assessments per visitor and 80 in total a day. Categories express qualitative judgments, not admission probabilities. Set `LIVE_AI_ENABLED` to `false` to switch it off.
 - **Demo matching:** a deterministic preference score and illustrative cost data let reviewers inspect the interface without paying for an API. Demo results are labeled and are never presented as a successful AI response.
 
 The **College Explorer** (`/colleges`) searches US four-year colleges with live U.S. Department of Education College Scorecard data: acceptance rate, SAT and ACT middle 50%, test policy, size, international share, cost, graduation rate and earnings. Students filter by state, acceptance rate, size and public/private, and can enter an SAT score to see a conservative reach / target / likely guide. Each college has its own page at `/colleges/<id>`. Quick categories: All US colleges, Top USA (admission rate under 10%), Ivy League and My list.
