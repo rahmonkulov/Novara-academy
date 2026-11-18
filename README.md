@@ -1,20 +1,10 @@
-# Novara Academy — Cloudflare edition
+# Novara Academy
 
-Upload the CONTENTS of this folder to the root of your GitHub repository (not the zip itself).
+University guidance for international applicants: a college-fit questionnaire with a personal roadmap, and a College Explorer with real admissions data for US colleges.
 
-Cloudflare Workers Git build settings:
-- Worker name: novara-academy
-- Build command: pnpm run build
-- Deploy command: pnpm run deploy
-- Root directory: /
-- Build environment: NODE_VERSION=22.16.0
+- Live site: https://novara-academy.abduraimrahmonkulov0.workers.dev
+- The app lives in [`Novara-academy-cloudflare/novara-academy`](Novara-academy-cloudflare/novara-academy). Its README covers setup, architecture, secrets and deployment.
 
-No API keys are included. After deployment add OPENAI_API_KEY as a runtime Secret under Worker Settings / Variables and Secrets. Never add it to GitHub or a NEXT_PUBLIC variable.
+Cloudflare Workers Builds settings: root directory `Novara-academy-cloudflare/novara-academy`, build command `pnpm run build`, deploy command `pnpm run deploy`, production branch `main`, build variable `NODE_VERSION=22.16.0`.
 
-Live AI is intentionally disabled initially. Before enabling LIVE_AI_ENABLED=true, protect the deployment with Cloudflare Access (including the workers.dev address) or implement authenticated, rate-limited access. This export does not inherit the private ChatGPT Site gate. Change LIVE_AI_ENABLED in wrangler.json to true only once access protection is verified; Git deployments reapply vars.
-
-AI reports require an active OpenAI API account and model access. The backend defaults to gpt-5.5; OPENAI_MODEL can override it with a compatible Responses/web-search model. Real AI requests and recommendation accuracy have NOT been validated. Sourced qualitative assessments are not admission probabilities.
-
-Email verification/delivery and Full Support enrollment are not connected. Demo university figures are illustrative. The quiz, demo results, comparisons, local roadmap tracking and printable reports are implemented.
-
-Development: pnpm install --frozen-lockfile; pnpm run dev.
+Never commit API keys. Add them as runtime Secrets in the Cloudflare dashboard.
