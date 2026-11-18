@@ -1,6 +1,7 @@
 // One place that talks to the AI companies. Each provider takes a system and a user message and returns the
 // model's text, which should be a JSON object. Which providers run depends on which keys the site has:
-// Cloudflare Workers AI needs no key (the AI binding), Gemini and Groq have free keys, OpenAI is paid.
+// Cloudflare Workers AI needs no key (the AI binding), Gemini and Groq have free keys. OpenAI is paid, so it is
+// used only when OPENAI_ENABLED is "true", even if an OPENAI_API_KEY secret exists.
 
 export type ProviderId = 'gemini' | 'workers-ai' | 'groq' | 'openai';
 
@@ -13,6 +14,7 @@ export type AiEnv = {
   GROQ_MODEL?: string;
   OPENAI_API_KEY?: string;
   OPENAI_MODEL?: string;
+  OPENAI_ENABLED?: string;
 };
 
 export const PROVIDER_NAMES: Record<ProviderId, string> = {
@@ -27,7 +29,7 @@ export function availableProviders(env: AiEnv): ProviderId[] {
   if (env.GEMINI_API_KEY) list.push('gemini');
   if (env.AI) list.push('workers-ai');
   if (env.GROQ_API_KEY) list.push('groq');
-  if (env.OPENAI_API_KEY) list.push('openai');
+  if (env.OPENAI_API_KEY && env.OPENAI_ENABLED === 'true') list.push('openai');
   return list;
 }
 

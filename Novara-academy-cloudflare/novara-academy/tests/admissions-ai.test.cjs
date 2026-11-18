@@ -48,7 +48,8 @@ test('JSON is found inside fenced or chatty model answers',()=>{
   assert.deepEqual(plain(providers.parseJsonText('```json\n{"a":1}\n```')),{a:1});
   assert.deepEqual(plain(providers.parseJsonText('Here it is: {"a":{"b":2}} Hope this helps')),{a:{b:2}});
   assert.equal(providers.parseJsonText('no json here'),null);
-  assert.deepEqual(plain(providers.availableProviders({GEMINI_API_KEY:'k',AI:{run(){}},OPENAI_API_KEY:'o'})),['gemini','workers-ai','openai']);
+  assert.deepEqual(plain(providers.availableProviders({GEMINI_API_KEY:'k',AI:{run(){}},OPENAI_API_KEY:'o'})),['gemini','workers-ai']);
+  assert.deepEqual(plain(providers.availableProviders({OPENAI_API_KEY:'o',OPENAI_ENABLED:'true'})),['openai']);
 });
 
 test('the site reader follows admissions links on the official domain only',async()=>{
@@ -181,7 +182,7 @@ test('the key check reports each AI without showing keys, and is reused for five
   let calls=0;
   const fetcher=async url=>{calls++;return String(url).includes('openai.com')?json({error:{message:'Incorrect API key provided: sk-proj-****5S4A.'}},401):json({candidates:[{content:{parts:[{text:'{"ok": true}'}]}}]})};
   const providers=load('app/ai-providers.ts',{},{fetch:fetcher});
-  const route=load('app/api/ai-status/route.ts',{'cloudflare:workers':{env:{GEMINI_API_KEY:'g',OPENAI_API_KEY:'o',AI:{run:async()=>({response:{ok:true}})}}},'/ai-providers':providers});
+  const route=load('app/api/ai-status/route.ts',{'cloudflare:workers':{env:{GEMINI_API_KEY:'g',OPENAI_API_KEY:'o',OPENAI_ENABLED:'true',AI:{run:async()=>({response:{ok:true}})}}},'/ai-providers':providers});
   const body=await (await route.GET()).json();
   assert.deepEqual(body.providers.map(item=>[item.provider,item.ok]),[['gemini',true],['workers-ai',true],['openai',false]]);
   assert.match(body.providers[2].error,/401/);
