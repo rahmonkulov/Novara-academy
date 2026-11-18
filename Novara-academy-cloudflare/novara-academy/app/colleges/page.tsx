@@ -3,7 +3,7 @@ import {useEffect, useRef, useState} from 'react';
 import {ArrowLeft, ArrowRight, Info, Search, X} from 'lucide-react';
 import {SiteFooter, SiteHeader, useSessionSat} from '../site-chrome';
 import {
-  CONTROLS, DEFAULT_SORT, EMPTY_QUERY, MAX_PAGE, OWNERSHIP_LABEL, PER_PAGE, SELECTIVITY, SIZES, SORTS, STATES,
+  CONTROLS, DATA_VERSION, DEFAULT_SORT, EMPTY_QUERY, MAX_PAGE, OWNERSHIP_LABEL, PER_PAGE, SELECTIVITY, SIZES, SORTS, STATES,
   chanceFor, cleanSearch, formatCount, formatRate, formatSatRange, formatShare, parseListQuery, parseSat, queryToSearch,
   type College, type ListQuery, type Option,
 } from '../colleges-lib';
@@ -97,7 +97,7 @@ export default function CollegeExplorer() {
     const controller = new AbortController();
     setLoading(true);
     setError('');
-    fetch(`/api/colleges${search ? `?${search}` : ''}`, {signal: controller.signal})
+    fetch(`/api/colleges?${search ? `${search}&` : ''}v=${DATA_VERSION}`, {signal: controller.signal})
       .then(async response => {
         const body = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(body.error || 'College data is temporarily unavailable.');

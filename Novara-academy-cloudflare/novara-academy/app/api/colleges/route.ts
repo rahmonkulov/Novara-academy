@@ -1,5 +1,5 @@
 import {env} from 'cloudflare:workers';
-import {PER_PAGE, buildDetailUrl, buildListUrl, parseId, parseListQuery, toCollege, toDetail} from '../../colleges-lib';
+import {DATA_VERSION, PER_PAGE, buildDetailUrl, buildListUrl, parseId, parseListQuery, toCollege, toDetail} from '../../colleges-lib';
 
 // GET /api/colleges?q=&state=&sel=&size=&control=&sort=&page=  → a page of colleges
 // GET /api/colleges?id=166027                                   → one college
@@ -20,7 +20,7 @@ class UpstreamError extends Error {
 const respond = (body: string, status = 200) =>
   new Response(body, {
     status,
-    headers: {'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': status === 200 ? 'public, max-age=3600' : 'no-store'},
+    headers: {'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': status === 200 ? 'public, max-age=600' : 'no-store'},
   });
 const fail = (error: string, status: number) => respond(JSON.stringify({error}), status);
 
@@ -83,7 +83,7 @@ export async function GET(req: Request) {
     if (params.has('id')) {
       const id = parseId(params.get('id'));
       if (!id) return fail('We could not find that college.', 400);
-      const body = await cached(`detail:${id}`, async () => {
+      const body = await cached(`v${DATA_VERSION}:detail:${id}`, async () => {
         const [row] = rowsOf(await scorecard(buildDetailUrl(id, apiKey)));
         if (!row) throw new UpstreamError(404);
         return JSON.stringify({college: toDetail(row)});
@@ -91,7 +91,7 @@ export async function GET(req: Request) {
       return respond(body);
     }
     const query = parseListQuery(params);
-    const body = await cached(`list:${JSON.stringify(query)}`, async () => {
+    const body = await cached(`v${DATA_VERSION}:list:${JSON.stringify(query)}`, async () => {
       const data = await scorecard(buildListUrl(query, apiKey));
       const total = Number(data.metadata?.total);
       return JSON.stringify({total: Number.isFinite(total) ? total : 0, page: query.page, perPage: PER_PAGE, results: rowsOf(data).map(toCollege)});

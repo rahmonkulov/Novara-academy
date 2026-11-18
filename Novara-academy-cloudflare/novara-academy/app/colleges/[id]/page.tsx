@@ -4,7 +4,7 @@ import {ArrowLeft, ExternalLink, Info, Target} from 'lucide-react';
 import {BRAND} from '../../brand';
 import {SiteFooter, SiteHeader, useSessionSat} from '../../site-chrome';
 import {
-  OWNERSHIP_LABEL, TEST_POLICY_LABEL, chanceFor, formatCount, formatMoney, formatPercent, formatRate, formatSatRange, formatShare,
+  DATA_VERSION, OWNERSHIP_LABEL, TEST_POLICY_LABEL, chanceFor, formatCount, formatMoney, formatPercent, formatRate, formatSatRange, formatShare,
   parseId, parseSat, type CollegeDetail,
 } from '../../colleges-lib';
 
@@ -37,7 +37,7 @@ export default function CollegePage() {
       return;
     }
     const controller = new AbortController();
-    fetch(`/api/colleges?id=${id}`, {signal: controller.signal})
+    fetch(`/api/colleges?id=${id}&v=${DATA_VERSION}`, {signal: controller.signal})
       .then(async response => {
         const body = await response.json().catch(() => ({}));
         if (!response.ok || !body.college) throw new Error(body.error || 'College data is temporarily unavailable.');

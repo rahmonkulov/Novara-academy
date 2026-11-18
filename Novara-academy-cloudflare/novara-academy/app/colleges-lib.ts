@@ -3,6 +3,8 @@
 // Data source: U.S. Department of Education College Scorecard API, latest available values.
 
 export const SCORECARD_URL = 'https://api.data.gov/ed/collegescorecard/v1/schools';
+// Bump when filter rules or the response shape change, so cached answers from older versions are not reused.
+export const DATA_VERSION = 2;
 export const PER_PAGE = 24;
 export const MAX_PAGE = 199;
 // Very small institutions (mostly single-subject religious schools) are hidden unless the student searches by name.
