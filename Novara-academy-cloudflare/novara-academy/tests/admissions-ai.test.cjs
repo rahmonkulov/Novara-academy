@@ -87,7 +87,7 @@ function harness({env={},gemini=()=>json({candidates:[{content:{parts:[{text:JSO
     if(target.startsWith('https://generativelanguage.googleapis.com/')){calls.gemini.push({url:target,key:init.headers['x-goog-api-key'],body:JSON.parse(init.body)});return gemini()}
     if(target.startsWith('https://api.openalex.org/')){
       const id=new URL(target).pathname.split('/').pop();
-      return json({id:'https://openalex.org/'+id,display_name:id==='I889458895'?'University of Hong Kong':'University '+id,homepage_url:id==='I111'?null:id==='I222'?'https://closed.example/':'https://www.hku.hk/',geo:{country:'Hong Kong',country_code:'HK'}});
+      return json({id:'https://openalex.org/'+id,display_name:id==='I900000001'?'University of Hong Kong':'University '+id,homepage_url:id==='I111'?null:id==='I222'?'https://closed.example/':'https://www.hku.hk/',geo:{country:'Hong Kong',country_code:'HK'}});
     }
     calls.site++;
     if(target.includes('closed.example'))return new Response('blocked',{status:403});
@@ -114,8 +114,8 @@ test('hand-checked universities never call the AI',async()=>{
 
 test('a university is read once with the free Gemini key, then everyone gets the saved answer',async()=>{
   const h=harness();
-  assert.deepEqual(await h.get('I889458895'),{status:'none',canResearch:true});
-  const first=await h.post('I889458895');
+  assert.deepEqual(await h.get('I900000001'),{status:'none',canResearch:true});
+  const first=await h.post('I900000001');
   assert.equal(first.body.status,'ready');
   assert.equal(first.body.source,'ai');
   assert.equal(first.body.domain,'hku.hk');
@@ -125,18 +125,18 @@ test('a university is read once with the free Gemini key, then everyone gets the
   assert.equal(h.calls.gemini[0].body.generationConfig.responseMimeType,'application/json');
   assert.match(h.calls.gemini[0].body.contents[0].parts[0].text,/PAGE 1: https:\/\/hku\.hk\//);
   assert.ok(h.calls.site>0);
-  assert.equal((await h.post('I889458895',{ip:'5.6.7.8'})).body.status,'ready');
+  assert.equal((await h.post('I900000001',{ip:'5.6.7.8'})).body.status,'ready');
   assert.equal(h.calls.gemini.length,1);
-  assert.equal(h.sql.prepare('SELECT model FROM admissions_ai WHERE id = ?').get('I889458895').model,'gemini:gemini-flash-lite-latest');
+  assert.equal(h.sql.prepare('SELECT model FROM admissions_ai WHERE id = ?').get('I900000001').model,'gemini:gemini-flash-lite-latest');
 });
 
 test('if Gemini fails, Cloudflare’s free AI answers instead',async()=>{
   const h=harness({gemini:()=>json({error:{message:'API key not valid'}},400),workersAi:()=>({response:'```json\n'+JSON.stringify(good)+'\n```'})});
-  const result=await h.post('I889458895');
+  const result=await h.post('I900000001');
   assert.equal(result.body.status,'ready');
   assert.equal(h.calls.workers.length,1);
   assert.equal(h.calls.workers[0].model,'@cf/meta/llama-3.3-70b-instruct-fp8-fast');
-  assert.equal(h.sql.prepare('SELECT model FROM admissions_ai WHERE id = ?').get('I889458895').model,'workers-ai:@cf/meta/llama-3.3-70b-instruct-fp8-fast');
+  assert.equal(h.sql.prepare('SELECT model FROM admissions_ai WHERE id = ?').get('I900000001').model,'workers-ai:@cf/meta/llama-3.3-70b-instruct-fp8-fast');
 });
 
 test('daily limits per visitor and in total, and other sites cannot start research',async()=>{
@@ -179,10 +179,10 @@ test('a wrong AI key shows only the service and code publicly and can be retried
 
 test('without any AI the button is hidden and research is refused',async()=>{
   const h=harness({env:{GEMINI_API_KEY:''}});
-  assert.deepEqual(await h.get('I889458895'),{status:'none',canResearch:false});
-  assert.equal((await h.post('I889458895')).status,503);
+  assert.deepEqual(await h.get('I900000001'),{status:'none',canResearch:false});
+  assert.equal((await h.post('I900000001')).status,503);
   const off=harness({env:{ADMISSIONS_AI:'off'}});
-  assert.deepEqual(await off.get('I889458895'),{status:'none',canResearch:false});
+  assert.deepEqual(await off.get('I900000001'),{status:'none',canResearch:false});
 });
 
 test('the key check reports each AI without showing keys, and is reused for five minutes',async()=>{
