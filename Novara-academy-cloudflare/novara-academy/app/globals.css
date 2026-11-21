@@ -199,3 +199,5 @@ a.wx-campus:hover{border-color:var(--primary)}
 .wx-campus-empty{margin:8px 0 0;font-size:13px;color:var(--muted)}
 .wx-campuses .helper{margin-top:8px;font-size:14px}
 @media(max-width:900px){.wx-campus-grid{grid-template-columns:1fr}.wx-campus-facts div{grid-template-columns:1fr;gap:2px}}
+.wx-controls{grid-template-columns:minmax(0,1fr)}
+.wx-controls .cx-search{margin-top:0}
