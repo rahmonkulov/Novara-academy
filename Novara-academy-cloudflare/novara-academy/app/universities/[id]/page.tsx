@@ -8,6 +8,9 @@ import {parseIelts} from '../../profile-store';
 import {parseSat} from '../../colleges-lib';
 import {ADMISSIONS, type AdmissionsInfo} from '../../admissions-data';
 import type {ResearchState} from '../../admissions-ai';
+import {scholarshipsFor} from '../../government-scholarships';
+import {campusGroupFor, type CampusGroup} from '../../campuses';
+import {GovernmentScholarshipCards} from '../../scholarship-cards';
 import {WORLD_DATA_VERSION, formatCompact, formatRank, parseWorldId, type WorldDetail, type WorldRanks} from '../../world-lib';
 
 function Metric({label, value, note}: {label: string; value: string; note?: string}) {
@@ -88,6 +91,40 @@ function ChanceBox({info, saved, onScores, name, canResearch, onResearch, busy, 
 
 const NOT_PUBLISHED = /^not published\.?$/i;
 
+// Campuses of one university that students apply to separately, side by side: fee, tuition and where to apply.
+function CampusCompare({group, currentId}: {group: CampusGroup; currentId: string}) {
+  return (
+    <section className="wx-section wx-campuses" aria-labelledby="campuses-title">
+      <h2 id="campuses-title">{group.name} campuses</h2>
+      <p className="helper">Each campus has its own application, fees and scholarships, so check them one by one. {group.note}</p>
+      <div className="wx-campus-grid">
+        {group.campuses.map(campus => {
+          const info = ADMISSIONS[campus.id];
+          const current = campus.id === currentId;
+          const body = (
+            <>
+              <strong className="wx-campus-name">{campus.name}</strong>
+              <span className="wx-campus-place">{campus.place}{current ? ' · this page' : ''}</span>
+              {info ? (
+                <dl className="wx-campus-facts">
+                  <div><dt>Application fee</dt><dd>{info.applicationFee}</dd></div>
+                  <div><dt>Tuition</dt><dd>{info.tuition}</dd></div>
+                  {info.applyVia && <div><dt>How you apply</dt><dd>{info.applyVia}</dd></div>}
+                </dl>
+              ) : (
+                <p className="wx-campus-empty">Not checked by hand yet. Open its page to find its admissions details.</p>
+              )}
+            </>
+          );
+          return current
+            ? <div key={campus.id} className="wx-campus wx-campus-current" aria-current="page">{body}</div>
+            : <a key={campus.id} className="wx-campus" href={`/universities/${campus.id}`}>{body}</a>;
+        })}
+      </div>
+    </section>
+  );
+}
+
 function AdmissionsSection({info: raw, ai, onRefresh}: {info: AdmissionsInfo; ai?: {domain?: string; stale?: boolean}; onRefresh?: () => void}) {
   // The AI only saw some pages, so "Not published" really means it was not on the pages it read.
   const show = (value: string) => (ai && NOT_PUBLISHED.test(value.trim()) ? 'Not found on the pages we read' : value);
@@ -129,6 +166,7 @@ function AdmissionsSection({info: raw, ai, onRefresh}: {info: AdmissionsInfo; ai
         )}
         {info.livingCost && <Metric label="Living costs" value={info.livingCost} />}
         <Metric label="Application fee" value={info.applicationFee} />
+        {info.applyVia && <Metric label="How you apply" value={show(info.applyVia)} />}
         <Metric label="English" value={info.english} />
         <Metric label="Tests and qualifications" value={info.tests} />
       </div>
@@ -363,6 +401,16 @@ export default function UniversityPage() {
               <AdmissionsSection info={research.info} ai={research.source === 'ai' ? {domain: research.domain, stale: research.stale} : undefined} onRefresh={startResearch} />
             ) : (
               <ResearchCard research={research} name={university.name} website={university.website} onStart={startResearch} busy={busy} />
+            )}
+
+            {campusGroupFor(university.id) && <CampusCompare group={campusGroupFor(university.id)!} currentId={university.id} />}
+
+            {scholarshipsFor(university.countryCode).length > 0 && (
+              <section className="wx-section wx-government" aria-labelledby="government-title">
+                <h2 id="government-title">Government scholarships for studying in {university.country}</h2>
+                <p className="helper">Paid by the government, not by {university.name}, and applied for separately. Not every university takes part, so check that {university.name} is on the scholarship’s list. <a className="inline-link" href="/scholarships">All government scholarships</a></p>
+                <GovernmentScholarshipCards items={scholarshipsFor(university.countryCode)} />
+              </section>
             )}
 
             <section className="wx-students" aria-labelledby="students-title">

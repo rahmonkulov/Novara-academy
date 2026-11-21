@@ -1,6 +1,6 @@
 'use client';
 import {useEffect, useState} from 'react';
-import {Globe2, Moon, Star, Sun} from 'lucide-react';
+import {Globe2, Landmark, Moon, Star, Sun} from 'lucide-react';
 import {BRAND} from './brand';
 import {
   LEGACY_SAT_KEY, MAX_SAVED, profileParts, readLists, readStoredProfile, summarizeProfile, usableScore, writeLists, writeScores,
@@ -138,7 +138,7 @@ export function ProfileNote({saved, summary}: {saved: Saved; summary: ProfileSum
   );
 }
 
-export function SiteHeader({active}: {active?: 'colleges' | 'universities'}) {
+export function SiteHeader({active}: {active?: 'colleges' | 'universities' | 'scholarships'}) {
   const [light, setLight] = useState(true);
   useEffect(() => {
     try {
@@ -165,8 +165,11 @@ export function SiteHeader({active}: {active?: 'colleges' | 'universities'}) {
         <img className="brand-logo" src={BRAND.logo} alt={BRAND.logoAlt} width={192} height={92} />
       </a>
       <div className="top-right">
-        <a className={`quiet cx-nav${active ? ' cx-nav-active' : ''}`} href="/universities" aria-current={active ? 'page' : undefined}>
+        <a className={`quiet cx-nav${active === 'universities' || active === 'colleges' ? ' cx-nav-active' : ''}`} href="/universities" aria-current={active === 'universities' || active === 'colleges' ? 'page' : undefined}>
           <Globe2 size={16} /> Universities
+        </a>
+        <a className={`quiet cx-nav${active === 'scholarships' ? ' cx-nav-active' : ''}`} href="/scholarships" aria-current={active === 'scholarships' ? 'page' : undefined}>
+          <Landmark size={16} /> Scholarships
         </a>
         <button className="icon-button" onClick={toggle} aria-label={light ? 'Use dark theme' : 'Use light theme'}>
           {light ? <Moon size={19} /> : <Sun size={19} />}
