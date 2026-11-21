@@ -51,7 +51,7 @@ export default function UniversityExplorer() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
-  const {saved, loaded, update: updateSaved, toggleUniversity} = useSaved();
+  const {saved, loaded, toggleUniversity} = useSaved();
   const profile = useProfileSummary();
   const resultsTop = useRef<HTMLDivElement>(null);
   const savedKey = saved.universities.join(',');
@@ -155,16 +155,11 @@ export default function UniversityExplorer() {
           </button>
         </nav>
 
-        <section className="cx-controls" aria-label="Search and filters">
+        <section className="cx-controls wx-controls" aria-label="Search and filters">
           <label className="search-field cx-search">
             <Search size={18} />
             <input type="search" value={searchText} onChange={event => setSearchText(event.target.value)} placeholder="Search any university, in any language" aria-label="Search universities" maxLength={80} disabled={listMode} />
             {searchText && <button type="button" className="cx-clear-input" onClick={() => setSearchText('')} aria-label="Clear search"><X size={16} /></button>}
-          </label>
-          <label className="cx-sat">
-            <span>Your IELTS</span>
-            <input inputMode="decimal" value={saved.ielts} onChange={event => updateSaved({ielts: event.target.value.replace(/[^\d.]/g, '').slice(0, 3)})} placeholder="e.g. 7.0" aria-describedby="ielts-help" />
-            <small id="ielts-help">Optional. Compared with each university’s minimum.</small>
           </label>
           {!listMode && (
             <div className="cx-filters wx-filters">
