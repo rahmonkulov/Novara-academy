@@ -81,9 +81,9 @@ export async function askJson(provider: ProviderId, env: AiEnv, request: Prompt,
   // Only tokens actually used are billed.
   const prompt = provider === 'gemini' || provider === 'openai' ? {...request, maxTokens: Math.max(request.maxTokens, 4096)} : request;
   if (provider === 'gemini') {
-    // Google's free models are sometimes "experiencing high demand" (503) or rate-limited (429):
-    // then the lighter Flash-Lite model gets one try.
-    const models = env.GEMINI_MODEL ? [env.GEMINI_MODEL] : ['gemini-flash-latest', 'gemini-flash-lite-latest'];
+    // Flash-Lite first: on the free tier it answers faster and allows far more requests a day than Flash.
+    // Flash gets one try when Flash-Lite is busy (503), rate-limited (429) or slow.
+    const models = env.GEMINI_MODEL ? [env.GEMINI_MODEL] : ['gemini-flash-lite-latest', 'gemini-flash-latest'];
     let lastError: ProviderError | null = null;
     for (const model of models) {
       let response: Response;

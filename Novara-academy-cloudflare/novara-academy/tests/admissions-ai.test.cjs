@@ -121,13 +121,13 @@ test('a university is read once with the free Gemini key, then everyone gets the
   assert.equal(first.body.domain,'hku.hk');
   assert.equal(first.body.info.tuition,'HK$182,000 per year (2027/28)');
   assert.equal(h.calls.gemini[0].key,'gemini-test');
-  assert.match(h.calls.gemini[0].url,/gemini-flash-latest:generateContent$/);
+  assert.match(h.calls.gemini[0].url,/gemini-flash-lite-latest:generateContent$/);
   assert.equal(h.calls.gemini[0].body.generationConfig.responseMimeType,'application/json');
   assert.match(h.calls.gemini[0].body.contents[0].parts[0].text,/PAGE 1: https:\/\/hku\.hk\//);
   assert.ok(h.calls.site>0);
   assert.equal((await h.post('I889458895',{ip:'5.6.7.8'})).body.status,'ready');
   assert.equal(h.calls.gemini.length,1);
-  assert.equal(h.sql.prepare('SELECT model FROM admissions_ai WHERE id = ?').get('I889458895').model,'gemini:gemini-flash-latest');
+  assert.equal(h.sql.prepare('SELECT model FROM admissions_ai WHERE id = ?').get('I889458895').model,'gemini:gemini-flash-lite-latest');
 });
 
 test('if Gemini fails, Cloudflare’s free AI answers instead',async()=>{
@@ -198,12 +198,12 @@ test('the key check reports each AI without showing keys, and is reused for five
   assert.equal(calls,2);
 });
 
-test('when Gemini Flash is overloaded, Flash-Lite gets one try',async()=>{
+test('when Gemini Flash-Lite is overloaded, Flash gets one try',async()=>{
   const asked=[];
-  const fetcher=async url=>{asked.push(String(url));return String(url).includes('flash-latest:')?json({error:{message:'high demand'}},503):json({candidates:[{content:{parts:[{text:'{"ok":true}'}]}}]})};
+  const fetcher=async url=>{asked.push(String(url));return String(url).includes('flash-lite-latest:')?json({error:{message:'high demand'}},503):json({candidates:[{content:{parts:[{text:'{"ok":true}'}]}}]})};
   const providers=load('app/ai-providers.ts',{},{fetch:fetcher});
   const answer=await providers.askJson('gemini',{GEMINI_API_KEY:'g'},{system:'s',user:'u',maxTokens:10});
-  assert.equal(answer.model,'gemini-flash-lite-latest');
+  assert.equal(answer.model,'gemini-flash-latest');
   assert.equal(asked.length,2);
   const bad=load('app/ai-providers.ts',{},{fetch:async()=>json({error:{message:'API key not valid'}},400)});
   await assert.rejects(bad.askJson('gemini',{GEMINI_API_KEY:'g'},{system:'s',user:'u',maxTokens:10}),error=>error.status===400);

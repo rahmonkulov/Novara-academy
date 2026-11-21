@@ -51,7 +51,7 @@ test('the assessment runs on Gemini, without the student’s name, school or ema
   const res=await r.post({profile,aiConsent:true});
   const body=await res.json();
   assert.equal(res.status,200);
-  assert.equal(body.model,'Gemini (Google) · gemini-flash-latest');
+  assert.equal(body.model,'Gemini (Google) · gemini-flash-lite-latest');
   assert.deepEqual(body.recommendations.map(x=>x.id),['mit','stanford','kaist']);
   assert.equal(body.sources.length,3);
   const sent=r.calls[0].contents[0].parts[0].text;
