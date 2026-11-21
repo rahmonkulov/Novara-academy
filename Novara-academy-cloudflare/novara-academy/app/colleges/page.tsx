@@ -3,6 +3,7 @@ import {useEffect, useRef, useState} from 'react';
 import {ArrowLeft, ArrowRight, Globe2, Info, Search, Star, X} from 'lucide-react';
 import {FilterSelect, ProfileNote, SaveButton, SiteFooter, SiteHeader, useProfileSummary, useSaved, type SelectOption} from '../site-chrome';
 import {loadJson} from '../load-json';
+import {WORLD_DATA_VERSION, type Country} from '../world-lib';
 import {
   CONTROLS, DATA_VERSION, DEFAULT_SORT, EMPTY_QUERY, MAX_PAGE, OWNERSHIP_LABEL, PER_PAGE, SELECTIVITY, SIZES, SORTS, STATES,
   apiSearch, chanceFor, cleanSearch, formatCount, formatRate, formatSatRange, formatShare, parseListQuery, parseSat, queryToSearch,
@@ -54,6 +55,16 @@ export default function CollegeExplorer() {
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
   const {saved, loaded, update: updateSaved, toggleCollege} = useSaved();
+  const [countries, setCountries] = useState<SelectOption[]>([{value: 'US', label: 'United States'}]);
+  useEffect(() => {
+    fetch(`/api/universities?countries=1&v=${WORLD_DATA_VERSION}`)
+      .then(response => (response.ok ? response.json() : {countries: []}))
+      .then((body: {countries?: Country[]}) => {
+        if (Array.isArray(body.countries) && body.countries.length) setCountries(body.countries.map(country => ({value: country.code, label: country.name})));
+      })
+      .catch(() => undefined);
+  }, []);
+  const countryOptions = countries.some(option => option.value === 'US') ? countries : [{value: 'US', label: 'United States'}, ...countries];
   const profile = useProfileSummary();
   const sat = parseSat(saved.sat);
   const resultsTop = useRef<HTMLDivElement>(null);
@@ -127,7 +138,7 @@ export default function CollegeExplorer() {
   const hasFilters = Boolean(query.q || query.state || query.sel || query.size || query.control || query.list);
   const totalPages = data ? Math.min(Math.max(1, Math.ceil(data.total / PER_PAGE)), MAX_PAGE + 1) : 1;
   const chips: {key: 'all' | 'top' | 'ivy' | 'saved'; label: string}[] = [
-    {key: 'all', label: 'All US colleges'},
+    {key: 'all', label: 'All US'},
     {key: 'top', label: 'Top USA (under 10%)'},
     {key: 'ivy', label: 'Ivy League'},
     {key: 'saved', label: `My list${saved.colleges.length ? ` (${saved.colleges.length})` : ''}`},
@@ -138,7 +149,7 @@ export default function CollegeExplorer() {
       <SiteHeader active="colleges" />
       <main className="cx-layout">
         <section className="cx-heading">
-          <p className="eyebrow"><span className="tiny-star">✳</span> US COLLEGES · ADMISSIONS DATA</p>
+          <p className="eyebrow"><span className="tiny-star">✳</span> UNIVERSITIES · UNITED STATES</p>
           <h1>Real admissions data.<br /><em>Every US college.</em></h1>
           <p className="lead">Search four-year US colleges by acceptance rate, size, state and type. Add your SAT once to see which ones are a reach, a target or likely for you. <a className="inline-link" href="/universities">Looking outside the US? Explore universities worldwide.</a></p>
         </section>
@@ -149,7 +160,7 @@ export default function CollegeExplorer() {
               {chip.key === 'saved' && <Star size={14} />}{chip.label}
             </button>
           ))}
-          <a className="cx-chip cx-chip-link" href="/universities"><Globe2 size={14} /> Other countries</a>
+          <a className="cx-chip cx-chip-link" href="/universities"><Globe2 size={14} /> All countries</a>
         </nav>
 
         <section className="cx-controls" aria-label="Search and filters">
@@ -164,7 +175,8 @@ export default function CollegeExplorer() {
             <small id="sat-help">Optional. Used on every college page.</small>
           </label>
           {!listMode && (
-            <div className="cx-filters">
+            <div className="cx-filters cx-filters-5">
+              <FilterSelect label="Country" value="US" onChange={country => window.location.assign(country ? `/universities?country=${country}` : '/universities')} options={countryOptions} anyLabel="All countries" />
               <FilterSelect label="State" value={query.state} onChange={state => update({state})} options={STATE_OPTIONS} anyLabel="All states" />
               <FilterSelect label="Acceptance rate" value={query.sel} onChange={sel => update({sel})} options={toOptions(SELECTIVITY)} anyLabel="Any rate" />
               <FilterSelect label="Size" value={query.size} onChange={size => update({size})} options={toOptions(SIZES)} anyLabel="Any size" />

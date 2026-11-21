@@ -2,22 +2,22 @@ import {env} from 'cloudflare:workers';
 import {ADMISSIONS} from '../../admissions-data';
 import {
   DEFAULT_DAILY_LIMIT, FAILED_RETRY_SECONDS, PER_VISITOR_DAILY_LIMIT, RESEARCH_TTL_DAYS, RUNNING_TIMEOUT_SECONDS,
-  buildResearchRequest, officialDomain, outputText, toAdmissionsInfo, type ResearchState,
+  extractionPrompt, officialDomain, toAdmissionsInfo, type ResearchState,
 } from '../../admissions-ai';
+import {ProviderError, askJson, availableProviders, parseJsonText, type AiEnv} from '../../ai-providers';
+import {readOfficialSite} from '../../site-reader';
 import {fetchJson} from '../../server-cache';
 import {buildWorldDetailUrl, parseWorldId, toWorldDetail} from '../../world-lib';
 
 // GET  /api/admissions?id=I200769079  → admissions and money for one university, if known
-// POST /api/admissions {id}            → have the AI read that university's official website and save the result
+// POST /api/admissions {id}            → read that university's official website, have an AI pull out the facts, save
 // Hand-checked entries (app/admissions-data.ts) always win. AI results are saved in the DATA_DB database, so each
 // university is researched once and every later student sees it instantly. Limits: DEFAULT_DAILY_LIMIT new
 // universities a day in total (ADMISSIONS_DAILY_LIMIT overrides it) and PER_VISITOR_DAILY_LIMIT per visitor.
 // Set ADMISSIONS_AI to "off" to stop new research.
 
-type Config = {
-  OPENAI_API_KEY?: string;
-  OPENAI_MODEL?: string;
-  ADMISSIONS_MODEL?: string;
+// AI providers, in the order they are tried: Gemini (free key), Cloudflare Workers AI (no key), Groq, OpenAI.
+type Config = AiEnv & {
   ADMISSIONS_AI?: string;
   ADMISSIONS_DAILY_LIMIT?: string;
   OPENALEX_API_KEY?: string;
@@ -29,7 +29,7 @@ const config = () => env as unknown as Config;
 const now = () => Math.floor(Date.now() / 1000);
 const reply = (body: ResearchState | {error: string}, status = 200) =>
   Response.json(body, {status, headers: {'Cache-Control': 'no-store'}});
-const canResearch = (c: Config) => Boolean(c.OPENAI_API_KEY && c.DATA_DB && c.ADMISSIONS_AI !== 'off');
+const canResearch = (c: Config) => Boolean(c.DATA_DB && availableProviders(c).length && c.ADMISSIONS_AI !== 'off');
 
 // "content" failures (the site does not publish the details) wait FAILED_RETRY_SECONDS before another try;
 // "service" failures (the AI or data service had a problem) can be retried after SERVICE_RETRY_SECONDS.
@@ -41,8 +41,9 @@ class ResearchError extends Error {
 }
 // Error text from other services, kept for debugging without anything that looks like a key.
 const cleanDetail = (text: string) => text.replace(/\b(sk|key|token)[-_a-z0-9*]{8,}/gi, '[hidden]').slice(0, 300);
-// "OpenAI 401: Incorrect API key…" → "OpenAI 401". Enough to tell a key problem from a busy service.
-const publicDetail = (text: string) => (text.match(/^(OpenAI|OpenAlex) \d{3}/)?.[0] ?? '');
+// "gemini 400: API key not valid… | workers-ai 0: …" → "gemini 400, workers-ai 0". Enough to tell a key problem
+// from a busy service, without showing other services' messages publicly.
+const publicDetail = (text: string) => (text.match(/\b(gemini|workers-ai|groq|openai|openalex) \d{1,3}\b/g) ?? []).join(', ');
 
 let tables: Promise<unknown> | null = null;
 function ensureTables(db: D1Database) {
@@ -155,29 +156,31 @@ export async function POST(req: Request) {
     );
     const domain = officialDomain(university.website);
     if (!domain) throw new ResearchError('This university has no official website on record, so there is nothing to read.');
-    const model = c.ADMISSIONS_MODEL || c.OPENAI_MODEL || 'gpt-5.5';
-    const response = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers: {Authorization: `Bearer ${c.OPENAI_API_KEY}`, 'Content-Type': 'application/json'},
-      signal: AbortSignal.timeout(150000),
-      body: JSON.stringify(buildResearchRequest({model, name: university.name, country: university.country, domain, today: day})),
-    });
-    const payload = (await response.json().catch(() => ({}))) as {error?: {message?: string}};
-    if (!response.ok) {
-      throw new ResearchError(
-        response.status === 429 ? 'The AI service is busy right now. Please try again later.' : 'The AI service could not do this right now. Please try again later.',
-        `OpenAI ${response.status}: ${payload.error?.message || ''}`,
-        'service',
-      );
+    const pages = await readOfficialSite(domain);
+    if (!pages.length) throw new ResearchError(`We could not open ${domain}. The website may block automatic reading.`, `site ${domain}: no pages`);
+    const prompt = extractionPrompt({name: university.name, country: university.country, domain, today: day, pages});
+    const problems: string[] = [];
+    let info: ReturnType<typeof toAdmissionsInfo> = null;
+    let model = '';
+    for (const provider of availableProviders(c)) {
+      try {
+        const answer = await askJson(provider, c, prompt);
+        info = toAdmissionsInfo(parseJsonText(answer.text), domain, new Date(started * 1000));
+        if (info) {
+          model = `${provider}:${answer.model}`;
+          break;
+        }
+        problems.push(`${provider} answer: nothing usable`);
+      } catch (error) {
+        problems.push(error instanceof ProviderError ? `${error.provider} ${error.status}: ${error.message}` : `${provider} 0: ${String(error)}`);
+      }
     }
-    let raw: unknown = null;
-    try {
-      raw = JSON.parse(outputText(payload));
-    } catch {
-      raw = null;
+    if (!info) {
+      const serviceTrouble = problems.length > 0 && problems.every(problem => /^\S+ \d{1,3}:/.test(problem));
+      throw serviceTrouble
+        ? new ResearchError('The AI service could not do this right now. Please try again later.', problems.join(' | '), 'service')
+        : new ResearchError(`${domain} does not seem to publish admissions details for international students, or we could not find them.`, problems.join(' | '));
     }
-    const info = toAdmissionsInfo(raw, domain, new Date(started * 1000));
-    if (!info) throw new ResearchError(`${domain} does not seem to publish admissions details for international students, or we could not find them.`);
     await db
       .prepare(`UPDATE admissions_ai SET status = 'ready', data = ?, error = NULL, domain = ?, model = ?, updated = ?, started = NULL, failed = NULL WHERE id = ?`)
       .bind(JSON.stringify(info), domain, model, started, id)

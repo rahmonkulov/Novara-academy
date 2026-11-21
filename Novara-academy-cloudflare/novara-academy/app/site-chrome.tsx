@@ -1,6 +1,6 @@
 'use client';
 import {useEffect, useState} from 'react';
-import {Globe2, GraduationCap, Moon, Star, Sun} from 'lucide-react';
+import {Globe2, Moon, Star, Sun} from 'lucide-react';
 import {BRAND} from './brand';
 import {
   LEGACY_SAT_KEY, MAX_SAVED, profileParts, readLists, readStoredProfile, summarizeProfile, usableScore, writeLists, writeScores,
@@ -165,11 +165,8 @@ export function SiteHeader({active}: {active?: 'colleges' | 'universities'}) {
         <img className="brand-logo" src={BRAND.logo} alt={BRAND.logoAlt} width={192} height={92} />
       </a>
       <div className="top-right">
-        <a className={`quiet cx-nav${active === 'universities' ? ' cx-nav-active' : ''}`} href="/universities" aria-current={active === 'universities' ? 'page' : undefined}>
+        <a className={`quiet cx-nav${active ? ' cx-nav-active' : ''}`} href="/universities" aria-current={active ? 'page' : undefined}>
           <Globe2 size={16} /> Universities
-        </a>
-        <a className={`quiet cx-nav${active === 'colleges' ? ' cx-nav-active' : ''}`} href="/colleges" aria-current={active === 'colleges' ? 'page' : undefined}>
-          <GraduationCap size={16} /> US colleges
         </a>
         <button className="icon-button" onClick={toggle} aria-label={light ? 'Use dark theme' : 'Use light theme'}>
           {light ? <Moon size={19} /> : <Sun size={19} />}

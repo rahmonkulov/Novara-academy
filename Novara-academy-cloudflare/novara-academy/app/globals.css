@@ -160,3 +160,15 @@ a.quiet,a.primary,a.secondary,.cx-footer-link{text-decoration:none}
 .wx-research-busy{display:flex;align-items:center;gap:12px;font-weight:500}
 .wx-spinner{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--foreground);animation:wx-spin .9s linear infinite;flex-shrink:0}
 @keyframes wx-spin{to{transform:rotate(360deg)}}
+.cx-filters-5{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media(max-width:1100px){.cx-filters-5{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){.cx-filters-5{grid-template-columns:1fr 1fr}}
+.wx-rankings{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:18px 0 0;color:#9a7b2f}
+.wx-ranking{display:inline-flex;align-items:baseline;gap:6px;padding:6px 12px;border-radius:999px;border:1px solid #aa905755;background:#aa90571a;color:var(--foreground);font-size:13px;text-decoration:none}
+.wx-ranking strong{font-size:15px}
+.wx-ranking:hover{border-color:#aa9057}
+.wx-ranking-note{font-size:12px;color:var(--muted)}
+.wx-employment .inline-link{font-size:12px;margin-top:4px;display:inline-flex;align-items:center;gap:4px;width:fit-content}
+.wx-students{margin-top:30px}
+.wx-students .helper{margin:0 0 12px;font-size:14px}
+.wx-students .secondary{display:inline-flex;align-items:center;gap:8px}
