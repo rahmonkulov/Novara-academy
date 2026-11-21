@@ -30,7 +30,12 @@ test('each campus keeps its own facts: CUHK costs HK$500 to apply, CUHK-Shenzhen
   assert.match(ADMISSIONS.I4210116924.applicationFee,/^Free/);
   assert.match(ADMISSIONS.I4210116924.applyVia,/separate from CUHK/);
   assert.match(ADMISSIONS.I889458895.applicationFee,/HK\$780/);
-  assert.match(ADMISSIONS.I168719708.applicationFee,/HK\$450/);
+  assert.match(ADMISSIONS.I168719708.applicationFee,/HK\$600 .*up to 2 programme choices/);
+  assert.match(ADMISSIONS.I4405263171.applyVia,/separate from CityUHK in Hong Kong/);
+  assert.match(ADMISSIONS.I12615008.applicationFee,/^None/);
+  assert.match(ADMISSIONS.I4405261251.applyVia,/separate from HKUST in Hong Kong/);
+  for(const id of ['I139264467','I193775966','I197347611'])assert.match(ADMISSIONS[id].applyVia,/Not the Common App|Common App/,id);
+  assert.match(ADMISSIONS.I193775966.applyVia,/the Common App/);
   assert.match(ADMISSIONS.I157485424.scholarships[0].amount,/Full tuition/);
 });
 
